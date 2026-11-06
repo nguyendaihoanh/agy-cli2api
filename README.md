@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.svg" alt="agy-cli2api Banner" width="100%">
+</p>
+
 # agy-cli2api (Antigravity CLI to OpenAI API Gateway)
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
@@ -57,7 +61,7 @@ curl http://127.0.0.1:7862/v1/chat/completions \
 
 ## Maintainers & Credits
 
-- **Community Maintainer:** Antigravity Community Team ([@agy-community](https://github.com/agy-community))
+- **Maintainer:** [@nguyendaihoanh](https://github.com/nguyendaihoanh)
 - **Base Upstream Credit:** GhostXia ([GhostXia/agy2api](https://github.com/GhostXia/agy2api))
 
 ---

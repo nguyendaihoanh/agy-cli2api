@@ -1,0 +1,255 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0e17" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#050811" />
+    </linearGradient>
+    <linearGradient id="gridGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.05" />
+      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.02" />
+    </linearGradient>
+
+    <!-- Metallic Vault Gate Gradients -->
+    <linearGradient id="vaultSteel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="vaultDoor" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#475569" />
+      <stop offset="30%" stop-color="#334155" />
+      <stop offset="70%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Cyberpunk Pipe / Laser Gradients -->
+    <linearGradient id="pipeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0ea5e9" />
+      <stop offset="50%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+    <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" />
+      <stop offset="30%" stop-color="#38bdf8" />
+      <stop offset="70%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ef4444" />
+      <stop offset="100%" stop-color="#dc2626" />
+    </linearGradient>
+
+    <!-- Filters for Glow Effects -->
+    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark Canvas Base -->
+  <rect width="1200" height="480" fill="url(#bgGrad)" />
+
+  <!-- Blueprint Background Grid -->
+  <g stroke="#1e293b" stroke-width="1" opacity="0.4">
+    <line x1="0" y1="80" x2="1200" y2="80" />
+    <line x1="0" y1="160" x2="1200" y2="160" />
+    <line x1="0" y1="240" x2="1200" y2="240" />
+    <line x1="0" y1="320" x2="1200" y2="320" />
+    <line x1="0" y1="400" x2="1200" y2="400" />
+    <line x1="150" y1="0" x2="150" y2="480" />
+    <line x1="300" y1="0" x2="300" y2="480" />
+    <line x1="450" y1="0" x2="450" y2="480" />
+    <line x1="600" y1="0" x2="600" y2="480" />
+    <line x1="750" y1="0" x2="750" y2="480" />
+    <line x1="900" y1="0" x2="900" y2="480" />
+    <line x1="1050" y1="0" x2="1050" y2="480" />
+  </g>
+
+  <!-- Ambient Light Spotlight -->
+  <circle cx="850" cy="300" r="220" fill="#10b981" opacity="0.06" filter="url(#neonGlow)" />
+  <circle cx="280" cy="240" r="200" fill="#0284c7" opacity="0.08" filter="url(#neonGlow)" />
+
+  <!-- ==================== LEFT: THE MASSIVE STEEL VAULT (ANTIGRAVITY CLI) ==================== -->
+  <g id="vault-fortress" transform="translate(60, 60)">
+    <!-- Vault Outer Wall Frame -->
+    <rect x="0" y="0" width="340" height="340" rx="16" fill="url(#vaultSteel)" stroke="#475569" stroke-width="4" />
+    <rect x="12" y="12" width="316" height="316" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
+
+    <!-- Massive Circular Vault Door -->
+    <circle cx="170" cy="170" r="130" fill="url(#vaultDoor)" stroke="#64748b" stroke-width="6" />
+    <circle cx="170" cy="170" r="110" fill="#090d16" stroke="#334155" stroke-width="3" stroke-dasharray="8,6" />
+
+    <!-- Vault Steel Spokes / Locking Pins -->
+    <rect x="164" y="20" width="12" height="300" fill="#475569" opacity="0.7" rx="3" />
+    <rect x="20" y="164" width="300" height="12" fill="#475569" opacity="0.7" rx="3" />
+    <rect x="65" y="65" width="210" height="12" transform="rotate(45 170 170)" fill="#334155" opacity="0.7" rx="3" />
+    <rect x="65" y="65" width="210" height="12" transform="rotate(-45 170 170)" fill="#334155" opacity="0.7" rx="3" />
+
+    <!-- Vault Center Wheel -->
+    <circle cx="170" cy="170" r="60" fill="#1e293b" stroke="#94a3b8" stroke-width="4" />
+    
+    <!-- Stylized Google Antigravity "AGY" Monogram on Door -->
+    <path d="M 170 130 L 195 185 L 145 185 Z" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linejoin="round" />
+    <line x1="155" y1="170" x2="185" y2="170" stroke="#38bdf8" stroke-width="4" />
+    <circle cx="170" cy="155" r="4" fill="#38bdf8" />
+
+    <!-- Door Rivets -->
+    <circle cx="45" cy="45" r="5" fill="#64748b" />
+    <circle cx="295" cy="45" r="5" fill="#64748b" />
+    <circle cx="45" cy="295" r="5" fill="#64748b" />
+    <circle cx="295" cy="295" r="5" fill="#64748b" />
+
+    <!-- Vault Warning Placard -->
+    <rect x="60" y="260" width="220" height="32" rx="4" fill="#18181b" stroke="#ef4444" stroke-width="1.5" />
+    <circle cx="75" cy="276" r="4" fill="#ef4444" filter="url(#softGlow)" />
+    <text x="90" y="281" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="#f87171" letter-spacing="1">LOCKED: GOOGLE CLI</text>
+  </g>
+
+  <!-- ==================== CENTER: THE SECRET BYPASS PIPE (API TUNNEL) ==================== -->
+  <g id="backdoor-tunnel">
+    <!-- Tunnel Entering Backside of Vault -->
+    <rect x="370" y="270" width="60" height="40" rx="4" fill="#334155" stroke="#64748b" stroke-width="2" />
+    
+    <!-- The Heavy Pipe (Outer Shell) -->
+    <path d="M 400 290 
+             C 480 290, 500 370, 570 370 
+             L 760 370 
+             C 810 370, 830 310, 880 310 
+             L 930 310" 
+          fill="none" stroke="#1e293b" stroke-width="32" stroke-linecap="round" />
+
+    <!-- Pipe Metallic Frame -->
+    <path d="M 400 290 
+             C 480 290, 500 370, 570 370 
+             L 760 370 
+             C 810 370, 830 310, 880 310 
+             L 930 310" 
+          fill="none" stroke="#475569" stroke-width="26" stroke-linecap="round" />
+
+    <!-- Glowing Liquid/Data Stream Inside Pipe -->
+    <path d="M 400 290 
+             C 480 290, 500 370, 570 370 
+             L 760 370 
+             C 810 370, 830 310, 880 310 
+             L 930 310" 
+          fill="none" stroke="url(#liquidGrad)" stroke-width="12" stroke-linecap="round" filter="url(#softGlow)" />
+
+    <!-- Pipe Joints / Pressure Collars -->
+    <rect x="520" y="352" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" />
+    <rect x="660" y="352" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" />
+    <rect x="790" y="335" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" transform="rotate(-30 798 353)" />
+
+    <!-- Bypass Pressure Gauge & Valve -->
+    <g transform="translate(640, 310)">
+      <line x1="28" y1="42" x2="28" y2="20" stroke="#64748b" stroke-width="6" />
+      <circle cx="28" cy="14" r="18" fill="#0f172a" stroke="#10b981" stroke-width="3" />
+      <!-- Gauge Needle -->
+      <line x1="28" y1="14" x2="38" y2="8" stroke="#34d399" stroke-width="2" />
+      <circle cx="28" cy="14" r="3" fill="#10b981" />
+      <!-- Indicator Tag -->
+      <rect x="55" y="4" width="95" height="20" rx="3" fill="#064e3b" stroke="#10b981" stroke-width="1" />
+      <text x="62" y="18" font-family="monospace" font-size="10" font-weight="700" fill="#6ee7b7">0.2s FAILOVER</text>
+    </g>
+
+    <!-- Hotwire / Secret Tap Connector -->
+    <g transform="translate(470, 275)">
+      <path d="M 0 0 C 15 -20, 35 -15, 45 5" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4,2" />
+      <path d="M 10 5 C 25 -10, 45 -5, 55 15" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="4,2" />
+      <circle cx="0" cy="0" r="4" fill="#f59e0b" filter="url(#softGlow)" />
+      <circle cx="45" cy="5" r="4" fill="#38bdf8" filter="url(#softGlow)" />
+      <!-- Tool Tag -->
+      <rect x="-35" y="-35" width="115" height="22" rx="4" fill="#1e1b4b" stroke="#818cf8" stroke-width="1" />
+      <text x="-25" y="-20" font-family="monospace" font-size="10" font-weight="700" fill="#a5b4fc">BACKDOOR HEIST</text>
+    </g>
+  </g>
+
+  <!-- ==================== RIGHT: THE JSON / OPENAI API RECEPTACLE ==================== -->
+  <g id="api-output" transform="translate(900, 160)">
+    <!-- Terminal Pod / Gateway Box -->
+    <rect x="30" y="80" width="230" height="160" rx="12" fill="#090d16" stroke="#38bdf8" stroke-width="2" filter="url(#softGlow)" />
+    
+    <!-- Gateway Screen Header -->
+    <rect x="30" y="80" width="230" height="30" rx="12" fill="#1e293b" />
+    <circle cx="48" cy="95" r="4" fill="#ef4444" />
+    <circle cx="62" cy="95" r="4" fill="#f59e0b" />
+    <circle cx="76" cy="95" r="4" fill="#10b981" />
+    <text x="96" y="100" font-family="monospace" font-size="11" font-weight="700" fill="#94a3b8">localhost:7862</text>
+
+    <!-- Endpoint Output Label -->
+    <text x="45" y="132" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">POST /v1/chat/completions</text>
+
+    <!-- Floating Streaming JSON Blocks -->
+    <g font-family="monospace" font-size="10">
+      <rect x="45" y="145" width="200" height="22" rx="3" fill="#1e293b" opacity="0.8" />
+      <text x="52" y="160" fill="#34d399">HTTP 200 {"status": "ok"}</text>
+
+      <rect x="45" y="175" width="200" height="22" rx="3" fill="#1e293b" opacity="0.8" />
+      <text x="52" y="190" fill="#67e8f9">{"choices":[{"delta":{...}}]}</text>
+
+      <rect x="45" y="205" width="130" height="20" rx="3" fill="#047857" opacity="0.9" />
+      <text x="52" y="219" fill="#ffffff" font-weight="700">OpenAI Compatible</text>
+    </g>
+
+    <!-- Pipe Outflow Gush / Digital Burst -->
+    <g filter="url(#neonGlow)">
+      <polygon points="20,150 40,140 40,160" fill="#10b981" opacity="0.8" />
+      <circle cx="10" cy="150" r="6" fill="#38bdf8" />
+      <circle cx="-15" cy="142" r="4" fill="#34d399" />
+      <circle cx="-25" cy="158" r="5" fill="#06b6d4" />
+      <!-- Data particles -->
+      <text x="-40" y="125" font-family="monospace" font-size="12" fill="#10b981">{ }</text>
+      <text x="-65" y="170" font-family="monospace" font-size="12" fill="#38bdf8">[ ]</text>
+      <text x="-30" y="190" font-family="monospace" font-size="11" fill="#34d399">0101</text>
+    </g>
+  </g>
+
+  <!-- ==================== HEADER TYPOGRAPHY & BRANDING ==================== -->
+  <g id="header-text" transform="translate(440, 75)">
+    <!-- Main Title -->
+    <text x="0" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="900" fill="#ffffff" letter-spacing="-0.5">
+      agy-cli2api
+    </text>
+    <!-- Subtitle Badge -->
+    <rect x="235" y="8" width="165" height="26" rx="5" fill="#0284c7" opacity="0.2" stroke="#38bdf8" stroke-width="1" />
+    <text x="245" y="26" font-family="monospace" font-size="12" font-weight="700" fill="#38bdf8">
+      HIGH-SPEED GATEWAY
+    </text>
+
+    <!-- Tagline -->
+    <text x="0" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="500" fill="#94a3b8">
+      Antigravity CLI to OpenAI API • Multi-Account Auto-Swap • Protobuf SQLite Parser
+    </text>
+
+    <!-- Feature Pills -->
+    <g transform="translate(0, 85)" font-family="monospace" font-size="11" font-weight="600">
+      <!-- Pill 1 -->
+      <rect x="0" y="0" width="115" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle cx="10" cy="12" r="3" fill="#10b981" />
+      <text x="20" y="16" fill="#cbd5e1">0.2s Failover</text>
+
+      <!-- Pill 2 -->
+      <rect x="125" y="0" width="135" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle cx="135" cy="12" r="3" fill="#38bdf8" />
+      <text x="145" y="16" fill="#cbd5e1">Pure-Python Core</text>
+
+      <!-- Pill 3 -->
+      <rect x="270" y="0" width="145" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle cx="280" cy="12" r="3" fill="#f59e0b" />
+      <text x="290" y="16" fill="#cbd5e1">Protobuf Decoded</text>
+    </g>
+  </g>
+
+</svg>
