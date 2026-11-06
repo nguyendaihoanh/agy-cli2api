@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Runtime / scratch (may contain local paths, prompts, or quota data)
+server_run.log
+srv.out
+srv.err
+*.log
+
+# Local conversation databases (never commit — contain prompts/responses)
+*.db
+
+# Stateful-mode isolated agy home (contains OAuth/auth state + conversations)
+stateful_home/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+# Environment & Secrets (CRITICAL - never commit)
+.env
+.env.*
+!.env.example
+
+# OAuth tokens & multi-account profiles
+.gemini/
+.gemini_profiles/
+antigravity-oauth-token*
+.active-account
+
+# SQLite WAL/SHM sidecar files
+*.db-wal
+*.db-shm
+*.db-journal

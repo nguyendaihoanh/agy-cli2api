@@ -1,0 +1,12 @@
+services:
+  agy2api:
+    build: .
+    container_name: agy2api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:7862:7862"
+    volumes:
+      - ~/.gemini:/root/.gemini
+      - ~/.gemini_profiles:/root/.gemini_profiles
+    env_file:
+      - .env

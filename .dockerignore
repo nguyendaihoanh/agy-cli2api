@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+.venv
+venv
+__pycache__
+*.pyc
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+stateful_home/
+.gemini/
+.gemini_profiles/
