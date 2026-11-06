@@ -18,6 +18,9 @@
 - **Multi-Account Auto-Swap (0.2s Failover):** Automatically detects `429 (Resource Exhausted)` or `403 (Permission Denied)` quota limits and hot-swaps tokens/profiles in 0.2 seconds without aborting client requests.
 - **Protobuf SQLite Binary Parser:** Directly decodes Antigravity SQLite internal binary payloads for rapid response extraction.
 - **Hybrid Stateful Session Store:** Supports `--conversation <id>` context reuse backed by SQLite isolation, with an instant fallback to stateless full-prompt if a turn is corrupted.
+- **Zero-Dependency Dotenv Loader:** Built-in `.env` parser loads environment variables automatically across macOS, Linux, and Windows without external libraries.
+- **Fail-Closed Timing-Attack Defense:** Constant-time Bearer token verification via `secrets.compare_digest` with strict fail-closed enforcement when authentication is enabled.
+- **Runtime PII & Path Redaction:** Automatically sanitizes absolute filesystem paths and account emails in HTTP error payloads and system rotation logs.
 - **Reasoning Leakage Suppression:** Suppresses raw thinking tokens when model answer is empty to prevent UI glitching.
 - **Headless Updater Quiet Mode:** Auto-touches `last_check.timestamp` across all profile roots to suppress background updater popups in headless environments.
 
