@@ -26,6 +26,25 @@
 
 ---
 
+## Prerequisites & Authentication
+
+Before running `agy-cli2api`, ensure the official Google Antigravity CLI (`agy`) is installed and authenticated:
+
+1. **One-Time Google Login:**
+   Open your terminal and run:
+   ```bash
+   agy
+   ```
+   Complete the Google OAuth sign-in in your browser, then exit. The CLI stores your credentials locally in your OS keychain / credentials directory.
+
+2. **(Optional) Multi-Account Pool:**
+   To enable automatic 0.2s failover across multiple accounts on quota limits:
+   - Save account tokens as `~/.gemini/antigravity-cli/antigravity-oauth-token.<email>`
+   - Or place profile directories under `~/.gemini_profiles/<email>/`
+   The gateway will automatically detect the pool and hot-swap on `429/403` errors.
+
+---
+
 ## Quickstart
 
 ### 1. Installation
