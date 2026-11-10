@@ -37,6 +37,7 @@ jobs:
         if: steps.ver.outputs.version != ''
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
           VER: ${{ steps.ver.outputs.version }}
         run: |
           TITLE="agy CLI $VER — re-validate integration"
