@@ -13,7 +13,7 @@ class ChatMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: str = "gemini-2.5-pro"
+    model: str = "gemini-3.8-flash-medium"
     messages: List[ChatMessage]
     stream: bool = False
     temperature: Optional[float] = None

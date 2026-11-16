@@ -103,6 +103,9 @@ if not defined AGY2API_KEY (
 echo.
 set "MODE_LABEL=stateless"
 if "!AGY2API_STATEFUL!"=="1" set "MODE_LABEL=stateful"
+if /i "!AGY2API_STATEFUL!"=="true" set "MODE_LABEL=stateful"
+if /i "!AGY2API_STATEFUL!"=="yes" set "MODE_LABEL=stateful"
+if /i "!AGY2API_STATEFUL!"=="on" set "MODE_LABEL=stateful"
 set "KEY_STATUS=configured (hidden)"
 if not defined AGY2API_KEY set "KEY_STATUS=not set"
 echo ========================================

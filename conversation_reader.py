@@ -6,7 +6,7 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-from proto_decoder import ProtoField, decode_message, find_fields, first_text, raw_text, walk_text
+from proto_decoder import ProtoField, decode_message, find_fields, raw_text, walk_text
 
 
 USER_STEP_TYPE = 14
@@ -24,6 +24,18 @@ _ERROR_KEYWORDS = (
     "retryable error",
     "failed to get load code assist",
     "stream reading error",
+    "resource_exhausted",
+    "code 429",
+    "quota",
+    "permission_denied",
+    "code 403",
+    "rate limit",
+    "timed out",
+    "deadline exceeded",
+    "connection refused",
+    "connection reset",
+    "broken pipe",
+    "request failed",
 )
 
 
@@ -47,7 +59,7 @@ class UpstreamError(ValueError):
 
 def read_response(db_path: str | Path) -> AgResponse:
     path = Path(db_path)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=5.0)
     try:
         rows = conn.execute(
             "SELECT idx, step_type, status, step_payload FROM steps ORDER BY idx"
@@ -55,33 +67,46 @@ def read_response(db_path: str | Path) -> AgResponse:
     finally:
         conn.close()
 
-    tool_summaries = _extract_tool_summaries(rows)
+    # Isolate steps belonging to the latest user turn so a failed resumed turn
+    # never leaks a previous turn's answer from the same DB.
+    last_user_idx = -1
+    for idx, step_type, _status, _ in rows:
+        if step_type == USER_STEP_TYPE:
+            last_user_idx = idx
+    turn_rows = [r for r in rows if r[0] > last_user_idx] if last_user_idx != -1 else rows
 
-    # Scan ALL completed model rows (newest first) for one that actually carries
-    # an answer. agy can emit several type-15 rows — reasoning-only, empty
-    # terminal markers, etc. — so picking just the last one misses the answer.
+    tool_summaries = _extract_tool_summaries(turn_rows)
+
+    # Scan completed model rows (newest first) and preserve reasoning even when
+    # agy splits reasoning and final answer across adjacent completed rows.
     completed = [
         payload
-        for _, step_type, status, payload in rows
+        for _, step_type, status, payload in turn_rows
         if step_type == MODEL_STEP_TYPE and status == DONE_STATUS and isinstance(payload, bytes)
     ]
-    reasoning_only = ""
+    best_answer = ""
+    best_reasoning = ""
     for payload in reversed(completed):
         answer, reasoning = _extract_model_response(payload)
-        if answer:
-            return AgResponse(
-                answer=answer,
-                reasoning=reasoning,
-                tool_summaries=tuple(tool_summaries),
-                db_path=str(path),
-            )
-        if reasoning and not reasoning_only:
-            reasoning_only = reasoning
+        if answer and not best_answer:
+            best_answer = answer
+            best_reasoning = reasoning
+        elif reasoning and not best_reasoning:
+            best_reasoning = reasoning
+        if best_answer and best_reasoning:
+            break
+    if best_answer:
+        return AgResponse(
+            answer=best_answer,
+            reasoning=best_reasoning,
+            tool_summaries=tuple(tool_summaries),
+            db_path=str(path),
+        )
 
     # No answer anywhere. If agy logged an upstream/transport error (type 17),
     # surface it verbatim — this is usually a network/proxy drop to Google, not
     # a parsing problem.
-    error = _extract_error(rows)
+    error = _extract_error(turn_rows)
     if error:
         raise UpstreamError(error)
 
@@ -89,7 +114,7 @@ def read_response(db_path: str | Path) -> AgResponse:
     # row whose text is still better than a blank response.
     incomplete = [
         payload
-        for _, step_type, status, payload in rows
+        for _, step_type, status, payload in turn_rows
         if step_type == MODEL_STEP_TYPE and status != DONE_STATUS and isinstance(payload, bytes)
     ]
     for payload in reversed(incomplete):
@@ -104,10 +129,10 @@ def read_response(db_path: str | Path) -> AgResponse:
             )
 
     # Last resort: reasoning was produced but no answer and no explicit error.
-    if reasoning_only:
+    if best_reasoning:
         return AgResponse(
             answer="",
-            reasoning=reasoning_only,
+            reasoning=best_reasoning,
             tool_summaries=tuple(tool_summaries),
             db_path=str(path),
             truncated=True,
@@ -118,7 +143,7 @@ def read_response(db_path: str | Path) -> AgResponse:
 
 def read_user_prompt(db_path: str | Path) -> str:
     path = Path(db_path)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, timeout=5.0)
     try:
         rows = conn.execute(
             """
@@ -138,7 +163,7 @@ def read_user_prompt(db_path: str | Path) -> str:
         fields = decode_message(payload)
         for field19 in find_fields(fields, 19):
             if isinstance(field19.value, list):
-                prompt = first_text(field19.value, 2)
+                prompt = raw_text(field19.value, 2)
                 if prompt:
                     return prompt
     return ""
@@ -154,15 +179,22 @@ def _extract_model_response(payload: bytes) -> tuple[str, str]:
     if not response_fields:
         return "", ""
 
-    response = response_fields[-1]
-    answer = raw_text(response, 1)
-    reasoning = raw_text(response, 3)
+    answer = ""
+    reasoning = ""
+    for response in reversed(response_fields):
+        if not answer:
+            answer = raw_text(response, 1)
+        if not reasoning:
+            reasoning = raw_text(response, 3)
+        if answer and reasoning:
+            break
     return answer, reasoning
 
 
 def _extract_error(rows: list[tuple[int, int, int, bytes]]) -> str:
     """Pull a concise upstream-error message out of agy error steps (type 17)."""
     found: list[str] = []
+    fallback: list[str] = []
     for _, step_type, _status, payload in rows:
         if step_type != ERROR_STEP_TYPE or not isinstance(payload, bytes):
             continue
@@ -171,11 +203,15 @@ def _extract_error(rows: list[tuple[int, int, int, bytes]]) -> str:
             if len(normalized) < 10:
                 continue
             low = normalized.lower()
+            snippet = normalized[:200]
             if any(kw in low for kw in _ERROR_KEYWORDS):
-                snippet = normalized[:200]
                 if snippet not in found:
                     found.append(snippet)
-    return " | ".join(found[:2])
+            elif snippet not in fallback and len(fallback) < 2:
+                fallback.append(snippet)
+    if found:
+        return " | ".join(found[:2])
+    return " | ".join(fallback[:2])
 
 
 def _extract_tool_summaries(rows: list[tuple[int, int, int, bytes]]) -> list[str]:

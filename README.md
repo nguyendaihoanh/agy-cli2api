@@ -61,9 +61,17 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
+> **Security & Runtime Notes:**
+> - **Change `AGY2API_KEY`** from the placeholder in `.env.example` before starting the server.
+> - Keep `HOST=127.0.0.1` when running via `uvicorn` directly. Binding `0.0.0.0` exposes your local Google CLI quota and `AGY_WORKDIR` to anyone who can reach the port. (When started with `python server.py`, non-loopback binds are refused unless `AGY2API_ALLOW_REMOTE=1`.)
+> - Multi-account token files (`antigravity-oauth-token.<email>` / `~/.gemini_profiles/<email>/`) apply on macOS/Linux token-file setups; on Windows `agy` reads from Windows Credential Manager.
+> - Optional flags in `.env`: `AGY2API_STATEFUL=true` (reuse `--conversation` sessions), `AGY_MODELS=...` (customize `/v1/models`).
+
 ### 3. Run the Server
 
 ```bash
+python server.py
+# Or directly with uvicorn (loopback only):
 uvicorn server:app --host 127.0.0.1 --port 7862
 ```
 
@@ -72,9 +80,9 @@ uvicorn server:app --host 127.0.0.1 --port 7862
 ```bash
 curl http://127.0.0.1:7862/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_strong_secret_api_key_here" \
+  -H "Authorization: Bearer YOUR_AGY2API_KEY" \
   -d '{
-    "model": "gemini-3.5-flash",
+    "model": "gemini-3.8-flash-medium",
     "messages": [{"role": "user", "content": "Hello Antigravity!"}]
   }'
 ```

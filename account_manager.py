@@ -7,11 +7,14 @@ import json
 import logging
 import os
 import shutil
+import tempfile
+import threading
 import time
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 
 logger = logging.getLogger("agy2api.account_manager")
+_ACCOUNT_LOCK = threading.RLock()
 
 def mask_email(email: str) -> str:
     """Mask email address for privacy in logs (e.g. user@domain.com -> us***@domain.com)."""
@@ -121,59 +124,87 @@ def _resolve_primary_account(available: List[str]) -> str:
     return available[0]
 
 
-def get_active_account() -> str:
-    """Get currently active account email, auto-recovering back to primary account after cooldown."""
-    available = get_available_accounts()
-    if not available:
-        return "default"
-
-    primary_acc = _resolve_primary_account(available)
-
-    if ACTIVE_ACC_FILE.exists():
+def _write_active_account(account: str) -> None:
+    """Atomically write the active account marker to avoid partial reads under concurrency."""
+    ACTIVE_ACC_FILE.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=".active-account-", dir=str(ACTIVE_ACC_FILE.parent)
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(account)
+        os.replace(tmp_name, ACTIVE_ACC_FILE)
+    except Exception:
         try:
-            current = ACTIVE_ACC_FILE.read_text(encoding="utf-8").strip()
-            if current in available:
-                if current != primary_acc and PRIMARY_RECOVERY_SECONDS > 0:
-                    age = time.time() - ACTIVE_ACC_FILE.stat().st_mtime
-                    if age >= PRIMARY_RECOVERY_SECONDS:
-                        logger.info(
-                            "Cooldown elapsed (%.0fs >= %ds). Restoring primary account: %s -> %s",
-                            age, PRIMARY_RECOVERY_SECONDS, mask_email(current), mask_email(primary_acc)
-                        )
-                        ACTIVE_ACC_FILE.write_text(primary_acc, encoding="utf-8")
-                        return primary_acc
-                return current
+            os.unlink(tmp_name)
         except OSError:
             pass
+        raise
 
-    try:
-        ACTIVE_ACC_FILE.parent.mkdir(parents=True, exist_ok=True)
-        ACTIVE_ACC_FILE.write_text(primary_acc, encoding="utf-8")
-    except OSError:
-        pass
-    return primary_acc
+
+def get_active_account() -> str:
+    """Get currently active account email, auto-recovering back to primary account after cooldown."""
+    with _ACCOUNT_LOCK:
+        available = get_available_accounts()
+        if not available:
+            return "default"
+
+        primary_acc = _resolve_primary_account(available)
+
+        if ACTIVE_ACC_FILE.exists():
+            try:
+                current = ACTIVE_ACC_FILE.read_text(encoding="utf-8").strip()
+                if current in available:
+                    if current != primary_acc and PRIMARY_RECOVERY_SECONDS > 0:
+                        age = time.time() - ACTIVE_ACC_FILE.stat().st_mtime
+                        if age >= PRIMARY_RECOVERY_SECONDS:
+                            logger.info(
+                                "Cooldown elapsed (%.0fs >= %ds). Restoring primary account: %s -> %s",
+                                age, PRIMARY_RECOVERY_SECONDS, mask_email(current), mask_email(primary_acc)
+                            )
+                            _write_active_account(primary_acc)
+                            return primary_acc
+                    return current
+            except OSError:
+                pass
+
+        try:
+            _write_active_account(primary_acc)
+        except OSError:
+            pass
+        return primary_acc
 
 
 def rotate_to_next_account(current_account: str) -> str:
     """Instantly switch to the next available account in the pool."""
-    available = get_available_accounts()
-    if len(available) <= 1:
-        return current_account
+    with _ACCOUNT_LOCK:
+        available = get_available_accounts()
+        if len(available) <= 1:
+            return current_account
 
-    try:
-        idx = available.index(current_account)
-        next_acc = available[(idx + 1) % len(available)]
-    except ValueError:
-        next_acc = available[0]
+        # If another worker already swapped away from current_account, adopt that
+        # fresh account instead of advancing past it prematurely.
+        if ACTIVE_ACC_FILE.exists():
+            try:
+                recorded = ACTIVE_ACC_FILE.read_text(encoding="utf-8").strip()
+                if recorded in available and recorded != current_account:
+                    return recorded
+            except OSError:
+                pass
 
-    try:
-        ACTIVE_ACC_FILE.parent.mkdir(parents=True, exist_ok=True)
-        ACTIVE_ACC_FILE.write_text(next_acc, encoding="utf-8")
-        logger.warning(
-            "Instant account swap: %s -> %s (pool size: %d)",
-            mask_email(current_account), mask_email(next_acc), len(available)
-        )
-    except OSError as e:
-        logger.error("Failed to write active account file: %s", e)
+        try:
+            idx = available.index(current_account)
+            next_acc = available[(idx + 1) % len(available)]
+        except ValueError:
+            next_acc = available[0]
 
-    return next_acc
+        try:
+            _write_active_account(next_acc)
+            logger.warning(
+                "Instant account swap: %s -> %s (pool size: %d)",
+                mask_email(current_account), mask_email(next_acc), len(available)
+            )
+        except OSError as e:
+            logger.error("Failed to write active account file: %s", e)
+
+        return next_acc

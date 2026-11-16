@@ -9,7 +9,9 @@ import logging
 import re
 import secrets
 import sys
+import threading
 import time
+import weakref
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Optional, List, Dict, Tuple
 
@@ -26,7 +28,7 @@ from agy_runner import (
     sweep_orphan_sidecars,
 )
 from config import is_loopback_host, resolve_model, settings
-from fake_stream import make_heartbeat, sse_event, stream_chunks
+from fake_stream import completion_id, make_heartbeat, sse_event, stream_chunks
 from models import ChatCompletionRequest, ModelInfo, ModelList
 from session_store import SessionStore, fingerprint
 
@@ -34,7 +36,7 @@ from session_store import SessionStore, fingerprint
 logger = logging.getLogger("agy2api")
 
 _SENSITIVE_PATH_RE = re.compile(
-    r'''([A-Za-z]:\\[^\s'"]+|/(?:Users|home|root|var|tmp|opt)/[^\s'"]+|[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)'''
+    r'''([A-Za-z]:[/\\][^\s'"]+|/(?:Users|home|root|var|tmp|opt)/[^\s'"]+|[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+|Bearer\s+[A-Za-z0-9._~+/-]+=*)'''
 )
 
 def _sanitize_public_error(message: str) -> str:
@@ -103,7 +105,7 @@ _run_semaphore = asyncio.Semaphore(max(1, settings.max_concurrency))
 
 # Experimental stateful-session layer (AGY2API_STATEFUL).
 _session_store = SessionStore(settings.max_sessions) if settings.stateful else None
-_conv_locks: dict[str, asyncio.Lock] = {}
+_conv_locks: weakref.WeakValueDictionary[str, asyncio.Lock] = weakref.WeakValueDictionary()
 # Conversations currently being run (resumed). Eviction must not delete these.
 _in_flight: set[str] = set()
 
@@ -136,13 +138,32 @@ def _conv_lock(conversation_id: str) -> asyncio.Lock:
 
 
 async def _run_agy_guarded(
-    prompt: str, model: Optional[str], conversation_id: Optional[str] = None, keep: bool = False
+    prompt: str,
+    model: Optional[str],
+    conversation_id: Optional[str] = None,
+    keep: bool = False,
+    full_prompt_fallback: Optional[str] = None,
+    cancel_event: Optional[threading.Event] = None,
 ):
     async with _run_semaphore:
-        return await run_agy_async(prompt, model, conversation_id, keep)
+        return await run_agy_async(
+            prompt,
+            model,
+            conversation_id,
+            keep,
+            full_prompt_fallback=full_prompt_fallback,
+            cancel_event=cancel_event,
+        )
 
 
-async def _execute_run(prompt: str, model: Optional[str], resume_id: Optional[str], keep: bool):
+async def _execute_run(
+    prompt: str,
+    model: Optional[str],
+    resume_id: Optional[str],
+    keep: bool,
+    full_prompt_fallback: Optional[str] = None,
+    cancel_event: Optional[threading.Event] = None,
+):
     """Run agy, serializing turns of the same resumed conversation so concurrent
     requests for one chat don't corrupt its session.
 
@@ -154,10 +175,24 @@ async def _execute_run(prompt: str, model: Optional[str], resume_id: Optional[st
         async with _conv_lock(resume_id):
             _in_flight.add(resume_id)
             try:
-                return await _run_agy_guarded(prompt, model, resume_id, keep)
+                return await _run_agy_guarded(
+                    prompt,
+                    model,
+                    resume_id,
+                    keep,
+                    full_prompt_fallback=full_prompt_fallback,
+                    cancel_event=cancel_event,
+                )
             finally:
                 _in_flight.discard(resume_id)
-    return await _run_agy_guarded(prompt, model, None, keep)
+    return await _run_agy_guarded(
+        prompt,
+        model,
+        None,
+        keep,
+        full_prompt_fallback=full_prompt_fallback,
+        cancel_event=cancel_event,
+    )
 
 
 def _msg_sigs(messages: List[Any]) -> List[str]:
@@ -167,14 +202,15 @@ def _msg_sigs(messages: List[Any]) -> List[str]:
     ]
 
 
-def _plan_request(messages: List[Any]) -> Tuple[str, Optional[str], List[str]]:
-    """Return (prompt_to_send, resume_conversation_id, sigs).
+def _plan_request(messages: List[Any]) -> Tuple[str, Optional[str], str, List[str]]:
+    """Return (prompt_to_send, resume_conversation_id, full_prompt, sigs).
 
     In stateful mode, if this request continues a known chat, send only the new
     turn against the existing agy conversation. Otherwise send the full history.
     """
+    full_prompt = format_messages(messages)
     if _session_store is None:
-        return format_messages(messages), None, []
+        return full_prompt, None, full_prompt, []
     sigs = _msg_sigs(messages)
     plan = _session_store.lookup(sigs)
     if plan.conversation_id and plan.prefix_len < len(messages):
@@ -184,15 +220,14 @@ def _plan_request(messages: List[Any]) -> Tuple[str, Optional[str], List[str]]:
         while new and getattr(new[0], "role", "") == "assistant":
             new = new[1:]
         if new:
-            return format_messages(new), plan.conversation_id, sigs
-    return format_messages(messages), None, sigs
+            return format_messages(new), plan.conversation_id, full_prompt, sigs
+    return full_prompt, None, full_prompt, sigs
 
 
 def _record_session(conversation_id: str, sigs: List[str]) -> None:
     if _session_store is None or not conversation_id:
         return
     for evicted in _session_store.remember(conversation_id, sigs, protected=_in_flight):
-        _conv_locks.pop(evicted, None)  # drop the lock too (no unbounded growth)
         try:
             cleanup_conversation(evicted)
         except Exception as exc:  # housekeeping must not break the request
@@ -205,7 +240,17 @@ def _forget_session(resume_id: Optional[str]) -> None:
     this, a broken session keeps failing until the server restarts."""
     if _session_store is not None and resume_id:
         _session_store.forget(resume_id)
-        _conv_locks.pop(resume_id, None)
+
+
+def _consume_task_exception(task: asyncio.Task) -> None:
+    if task.cancelled():
+        return
+    try:
+        exc = task.exception()
+    except asyncio.CancelledError:
+        return
+    if exc is not None:
+        logger.debug("background disconnected agy run failed: %s", exc)
 
 
 async def verify_token(
@@ -237,7 +282,7 @@ async def chat_completions(
 ):
     model = request_body.model
     agy_model = resolve_model(model)
-    prompt, resume_id, sigs = _plan_request(request_body.messages)
+    prompt, resume_id, full_prompt, sigs = _plan_request(request_body.messages)
     keep = settings.stateful
     logger.info(
         "request: model=%s (agy=%s) stream=%s messages=%d prompt_chars=%d resume=%s",
@@ -247,14 +292,18 @@ async def chat_completions(
 
     if request_body.stream:
         return StreamingResponse(
-            _stream_response(prompt, model, agy_model, request, resume_id, keep, sigs),
+            _stream_response(
+                prompt, model, agy_model, request, resume_id, keep, sigs, full_prompt
+            ),
             media_type="text/event-stream",
             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
 
     started = time.time()
     try:
-        result = await _execute_run(prompt, agy_model, resume_id, keep)
+        result = await _execute_run(
+            prompt, agy_model, resume_id, keep, full_prompt_fallback=full_prompt
+        )
     except Exception as exc:
         _forget_session(resume_id)
         logger.error(
@@ -263,18 +312,24 @@ async def chat_completions(
         )
         return _error_response(_sanitize_public_error(str(exc)), status_code=500)
 
-    _record_session(Path(result.db_path).stem, sigs)
-    fr = "length" if result.response.truncated else "stop"
-    logger.info(
-        "ok (non-stream): model=%s answer_chars=%d reasoning_chars=%d truncated=%s db=%s resume=%s %.1fs",
-        model, len(result.response.answer), len(result.response.reasoning),
-        result.response.truncated, result.db_path.name, bool(resume_id), time.time() - started,
-    )
     ans = result.response.answer
     reas = result.response.reasoning
-    if not (ans and ans.strip()):
-        ans = "Yêu cầu đang được xử lý hoặc gặp sự cố gián đoạn từ mô hình. Xin vui lòng thử lại."
-        reas = ""
+    if not (ans and ans.strip()) and not (reas and reas.strip()):
+        _forget_session(resume_id)
+        logger.error(
+            "FAILED (non-stream): empty model response for model=%s db=%s",
+            model, result.db_path.name,
+        )
+        return _error_response("Model returned an empty response.", status_code=502)
+
+    if sigs:
+        _record_session(Path(result.db_path).stem, sigs)
+    fr = "length" if (result.response.truncated or not (ans and ans.strip())) else "stop"
+    logger.info(
+        "ok (non-stream): model=%s answer_chars=%d reasoning_chars=%d truncated=%s db=%s resume=%s %.1fs",
+        model, len(ans), len(reas),
+        result.response.truncated, result.db_path.name, bool(resume_id), time.time() - started,
+    )
     return JSONResponse(
         content=build_completion_response(
             answer=ans,
@@ -291,39 +346,66 @@ async def health() -> Dict[str, str]:
 
 
 async def _stream_response(
-    prompt: str, model: str, agy_model: Optional[str], request: Request,
-    resume_id: Optional[str] = None, keep: bool = False, sigs: Optional[List[str]] = None,
+    prompt: str,
+    model: str,
+    agy_model: Optional[str],
+    request: Request,
+    resume_id: Optional[str] = None,
+    keep: bool = False,
+    sigs: Optional[List[str]] = None,
+    full_prompt: Optional[str] = None,
 ) -> AsyncIterator[bytes]:
     started = time.time()
-    task = asyncio.create_task(_execute_run(prompt, agy_model, resume_id, keep))
+    stream_cid = completion_id()
+    stream_created = int(time.time())
+    cancel_event = threading.Event()
+    task = asyncio.create_task(
+        _execute_run(
+            prompt,
+            agy_model,
+            resume_id,
+            keep,
+            full_prompt_fallback=full_prompt,
+            cancel_event=cancel_event,
+        )
+    )
     try:
         while not task.done():
             if await request.is_disconnected():
+                cancel_event.set()
                 logger.warning(
-                    "client disconnected after %.1fs; agy run continues in background "
-                    "until it finishes (cannot be interrupted mid-print)",
+                    "client disconnected after %.1fs; signaled cancel (in-flight agy finishes in background)",
                     time.time() - started,
                 )
-                task.cancel()
+                task.add_done_callback(_consume_task_exception)
                 return
-            yield sse_event(make_heartbeat(model))
+            yield sse_event(make_heartbeat(model, cid=stream_cid, created=stream_created))
             await asyncio.sleep(1)
 
         result = await task
-        if sigs:
-            _record_session(Path(result.db_path).stem, sigs)
-        fr = "length" if result.response.truncated else "stop"
-        logger.info(
-            "ok (stream): model=%s answer_chars=%d reasoning_chars=%d truncated=%s db=%s resume=%s %.1fs",
-            model, len(result.response.answer), len(result.response.reasoning),
-            result.response.truncated, result.db_path.name, bool(resume_id), time.time() - started,
-        )
         ans = result.response.answer
         reas = result.response.reasoning
-        if not (ans and ans.strip()):
-            ans = "Yêu cầu đang được xử lý hoặc gặp sự cố gián đoạn từ mô hình. Xin vui lòng thử lại."
-            reas = ""
-        async for item in stream_chunks(ans, reas, model, finish_reason=fr):
+        if not (ans and ans.strip()) and not (reas and reas.strip()):
+            _forget_session(resume_id)
+            logger.error(
+                "FAILED (stream): empty model response for model=%s db=%s",
+                model, result.db_path.name,
+            )
+            yield sse_event({"error": {"message": "Model returned an empty response.", "type": "agy_error"}})
+            yield sse_event("[DONE]")
+            return
+
+        if sigs:
+            _record_session(Path(result.db_path).stem, sigs)
+        fr = "length" if (result.response.truncated or not (ans and ans.strip())) else "stop"
+        logger.info(
+            "ok (stream): model=%s answer_chars=%d reasoning_chars=%d truncated=%s db=%s resume=%s %.1fs",
+            model, len(ans), len(reas),
+            result.response.truncated, result.db_path.name, bool(resume_id), time.time() - started,
+        )
+        async for item in stream_chunks(
+            ans, reas, model, finish_reason=fr, cid=stream_cid, created=stream_created
+        ):
             yield item
     except Exception as exc:
         _forget_session(resume_id)

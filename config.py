@@ -8,6 +8,20 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict
 from pathlib import Path
 
+def _strip_inline_comment(val: str) -> str:
+    """Strip outer matching quotes or unquoted inline '#' comments."""
+    val = val.strip()
+    if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+        return val[1:-1]
+    if "#" in val:
+        # Treat '#' preceded by whitespace (or at index 0) as an inline comment.
+        for idx, ch in enumerate(val):
+            if ch == "#" and (idx == 0 or val[idx - 1].isspace()):
+                val = val[:idx].strip()
+                break
+    return val
+
+
 def _load_dotenv() -> None:
     """Load variables from .env file into os.environ if present, without external dependencies."""
     env_path = Path(__file__).resolve().parent / ".env"
@@ -17,9 +31,11 @@ def _load_dotenv() -> None:
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
+        if line.startswith("export "):
+            line = line[len("export "):].lstrip()
         key, _, val = line.partition("=")
         key = key.strip()
-        val = val.strip().strip("'\"")
+        val = _strip_inline_comment(val)
         if key and key not in os.environ:
             os.environ[key] = val
 
@@ -75,6 +91,13 @@ MODEL_MAP: Dict[str, str] = {
     "gemini-4-argon-medium": "Gemini 4 Argon (Medium)",
     "gemini-4-argon-high": "Gemini 4 Argon (High)",
     "gemini-4-argon-low": "Gemini 4 Argon (Low)",
+    # Gemini 4 Hydrogen
+    "gemini-4-hydrogen-low": "Gemini 4 Hydrogen (Low)",
+    "gemini-4-hydrogen-medium": "Gemini 4 Hydrogen (Medium)",
+    "gemini-4-hydrogen-high": "Gemini 4 Hydrogen (High)",
+    "gemini-4-hydrogen-xhigh": "Gemini 4 Hydrogen (XHigh)",
+    # Orchestrator
+    "gemini-pro-orchestrator-g1-pro": "Orchestrator (Argon)",
     # Gemini 3.8 Flash
     "gemini-3.8-flash-high": "Gemini 3.8 Flash (High)",
     "gemini-3.8-flash-medium": "Gemini 3.8 Flash (Medium)",

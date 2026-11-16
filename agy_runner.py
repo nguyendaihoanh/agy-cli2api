@@ -7,11 +7,13 @@ import logging
 import os
 import re
 import shutil
+import sqlite3
 import subprocess
 import tempfile
+import threading
 import time
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from pathlib import Path
 
 from config import settings
@@ -19,6 +21,7 @@ from conversation_reader import AgResponse, UpstreamError, read_response
 
 try:
     from account_manager import (
+        PROFILES_DIR,
         get_active_account,
         get_profile_dir,
         rotate_to_next_account,
@@ -28,6 +31,7 @@ try:
     _HAS_MULTI_ACCOUNT = True
 except ImportError:
     _HAS_MULTI_ACCOUNT = False
+    PROFILES_DIR = Path()
     mask_email = lambda e: e
 
 
@@ -64,39 +68,12 @@ def _enrich_error(exc: Exception, completed: subprocess.CompletedProcess) -> Exc
     return type(exc)(enriched) if isinstance(exc, ValueError) else RuntimeError(enriched)
 
 
-def _run_agy_once(
-    prompt: str,
-    model: Optional[str],
-    conversation_id: Optional[str],
-    keep: bool,
-) -> AgyRunResult:
-    """Run agy exactly once and read the result. See run_agy for retry policy."""
-    start_time = time.time()
-
-    # Validate prerequisites up front so failures name the real culprit instead
-    # of a generic "agy not found" (subprocess raises FileNotFoundError for a
-    # missing executable AND for a missing cwd).
-    if not (Path(settings.agy_path).exists() or shutil.which(settings.agy_path)):
-        raise RuntimeError(f"agy executable not found: {settings.agy_path}")
-    workdir = Path(settings.workdir)
-    if not workdir.exists():
-        raise RuntimeError(f"agy working directory does not exist: {workdir}")
-    # In stateful mode agy runs inside an isolated home; make sure it exists so
-    # agy can write its data there. (Auth/login still lives in that home — see
-    # the README; log in there once after enabling stateful mode.) The
-    # conversations subdir is ours to create; the real auth state is not.
-    if settings.stateful:
-        settings.stateful_home.mkdir(parents=True, exist_ok=True)
-        settings.conversations_dir.mkdir(parents=True, exist_ok=True)
-    elif not settings.conversations_dir.exists():
-        raise RuntimeError(
-            f"agy conversations directory does not exist: {settings.conversations_dir} "
-            "(is agy installed and logged in?)"
-        )
-
+def _resolve_run_context() -> Tuple[Dict[str, str], Path, Optional[Path], str]:
+    """Resolve subprocess environment, active conversation directory, profile dir, and account."""
     run_env = settings.agy_env()
     conv_dir = settings.conversations_dir
     p_dir: Optional[Path] = None
+    active_acc = "default"
     if _HAS_MULTI_ACCOUNT:
         try:
             active_acc = get_active_account()
@@ -108,6 +85,52 @@ def _run_agy_once(
                 conv_dir.mkdir(parents=True, exist_ok=True)
         except Exception:
             pass
+    return run_env, conv_dir, p_dir, active_acc
+
+
+def _read_log_safe(log_path: str) -> str:
+    try:
+        return Path(log_path).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+
+def _run_agy_once(
+    prompt: str,
+    model: Optional[str],
+    conversation_id: Optional[str],
+    keep: bool,
+    cancel_event: Optional[threading.Event] = None,
+) -> AgyRunResult:
+    """Run agy exactly once and read the result. See run_agy for retry policy."""
+    if cancel_event is not None and cancel_event.is_set():
+        raise RuntimeError("request cancelled before starting agy")
+
+    start_time = time.time()
+
+    # Validate prerequisites up front so failures name the real culprit instead
+    # of a generic "agy not found" (subprocess raises FileNotFoundError for a
+    # missing executable AND for a missing cwd).
+    if not (Path(settings.agy_path).exists() or shutil.which(settings.agy_path)):
+        raise RuntimeError(f"agy executable not found: {settings.agy_path}")
+    workdir = Path(settings.workdir)
+    if not workdir.exists():
+        raise RuntimeError(f"agy working directory does not exist: {workdir}")
+
+    run_env, conv_dir, p_dir, _ = _resolve_run_context()
+
+    # In stateful mode (or multi-account profile mode), ensure the target
+    # conversations directory exists. In single-account stateless mode, fail
+    # clearly if the default agy conversations folder hasn't been initialized.
+    if settings.stateful:
+        settings.stateful_home.mkdir(parents=True, exist_ok=True)
+        conv_dir.mkdir(parents=True, exist_ok=True)
+    elif p_dir is None and not conv_dir.exists():
+        raise RuntimeError(
+            f"agy conversations directory does not exist: {conv_dir} "
+            "(is agy installed and logged in?)"
+        )
+
     _keep_updater_quiet(p_dir)
     before = _snapshot_conversations(conv_dir)
 
@@ -126,11 +149,12 @@ def _run_agy_once(
     # timeout sit a margin ABOVE it. That way agy hits its timeout first and
     # flushes whatever partial response it has (degrade-readable) instead of us
     # hard-killing it and truncating long replies.
+    print_timeout_sec = max(1, int(settings.request_timeout))
     command = [
         settings.agy_path,
         "--print", "",
         "--log-file", log_path,
-        "--print-timeout", f"{int(settings.request_timeout)}s",
+        "--print-timeout", f"{print_timeout_sec}s",
     ]
     if conversation_id:
         command.extend(["--conversation", conversation_id])
@@ -186,7 +210,7 @@ def _run_agy_once(
         if db_path is not None:
             try:
                 response = _read_response_with_retry(db_path)
-            except ValueError as exc:
+            except (ValueError, sqlite3.OperationalError) as exc:
                 # Surface agy's exit status + stderr/stdout alongside the parse
                 # failure. An empty/partial DB used to hide agy's real exit
                 # reason; now log/error responses carry it. UpstreamError is a
@@ -199,7 +223,14 @@ def _run_agy_once(
                 # everything when cleanup is disabled (debugging).
                 if settings.cleanup_db and owned_by_us and conversation_id is None:
                     _cleanup_conversation(db_path)
-                raise _enrich_error(exc, completed) from exc
+                enriched = _enrich_error(exc, completed)
+                if not isinstance(exc, UpstreamError):
+                    diag_text = "\n".join(
+                        part for part in (completed.stderr, completed.stdout, _read_log_safe(log_path)) if part
+                    )
+                    if _has_quota_marker(diag_text):
+                        raise UpstreamError(str(enriched)) from exc
+                raise enriched from exc
             # Only delete artifacts we positively own (resolved via our log id),
             # on a clean, non-truncated run. Never delete a heuristically-matched
             # DB — it might be the user's own manual agy conversation.
@@ -217,13 +248,20 @@ def _run_agy_once(
                 stderr=completed.stderr,
             )
 
-        # No DB found at all — now report the exit status.
+        # No DB found at all — now report the exit status (and promote quota
+        # failures to UpstreamError so retry/auto-swap triggers).
         if completed.returncode != 0:
             details = completed.stderr.strip() or completed.stdout.strip() or "no output"
-            raise RuntimeError(
+            diag_text = "\n".join(
+                part for part in (details, _read_log_safe(log_path)) if part
+            )
+            msg = (
                 f"agy exited with code {completed.returncode}: {details} "
                 f"(no conversation DB found; possible agy-side timeout or crash)"
             )
+            if _has_quota_marker(diag_text):
+                raise UpstreamError(msg)
+            raise RuntimeError(msg)
         raise RuntimeError("agy completed but no new conversation database was found")
     finally:
         try:
@@ -273,41 +311,91 @@ QUOTA_MARKERS = (
     "permission_denied",
     "code 403",
 )
+
+# Non-fatal background warnings in agy logs that may mention 403/permission_denied.
+_BENIGN_QUOTA_SUBSTRINGS = (
+    "fetchconfig",
+    "access_token_scope_insufficient",
+    "telemetry.go",
+    "repo.go",
+)
+
+
+def _has_quota_marker(text: str) -> bool:
+    """Return True if any non-benign log/stderr line carries a quota/403 marker."""
+    for raw_line in text.splitlines():
+        line = raw_line.lower()
+        if any(benign in line for benign in _BENIGN_QUOTA_SUBSTRINGS):
+            continue
+        if any(marker in line for marker in QUOTA_MARKERS):
+            return True
+    return False
+
+
 def run_agy(
     prompt: str,
     model: Optional[str] = None,
     conversation_id: Optional[str] = None,
     keep: bool = False,
+    full_prompt_fallback: Optional[str] = None,
+    cancel_event: Optional[threading.Event] = None,
 ) -> AgyRunResult:
     """Run agy, retrying transient upstream errors and auto-swapping exhausted accounts."""
     available = get_available_accounts() if _HAS_MULTI_ACCOUNT else ["default"]
     max_swaps = max(1, len(available))
 
+    target_cid = conversation_id
+    current_prompt = prompt
     last_exc: Optional[Exception] = None
+
     for swap_round in range(max_swaps):
+        if cancel_event is not None and cancel_event.is_set():
+            raise RuntimeError("request cancelled before execution")
+
         active_acc = get_active_account() if _HAS_MULTI_ACCOUNT else "default"
+        _, conv_dir, _, _ = _resolve_run_context()
+        if target_cid and full_prompt_fallback and not (conv_dir / f"{target_cid}.db").exists():
+            # Target conversation DB does not exist in this profile (e.g. after
+            # an account swap or cooldown recovery); fall back to full history.
+            target_cid = None
+            current_prompt = full_prompt_fallback
+
         swapped = False
 
         for attempt in range(_UPSTREAM_RETRY_MAX):
+            if cancel_event is not None and cancel_event.is_set():
+                raise RuntimeError("request cancelled before execution")
+
             try:
-                return _run_agy_once(prompt, model, conversation_id, keep)
+                return _run_agy_once(
+                    current_prompt,
+                    model,
+                    target_cid,
+                    keep,
+                    cancel_event=cancel_event,
+                )
             except UpstreamError as exc:
                 last_exc = exc
-                err_str = str(exc).lower()
+                err_str = str(exc)
 
                 # Quota exhausted: instant auto-swap to next account in pool
-                if any(m in err_str for m in QUOTA_MARKERS):
+                if _has_quota_marker(err_str):
                     if _HAS_MULTI_ACCOUNT and len(available) > 1 and swap_round + 1 < max_swaps:
                         next_acc = rotate_to_next_account(active_acc)
                         logger.warning(
                             "[Auto-Swap] Account %s hit quota. Swapped to %s (round %d/%d). Retrying immediately...",
                             mask_email(active_acc), mask_email(next_acc), swap_round + 1, max_swaps,
                         )
+                        if target_cid and full_prompt_fallback:
+                            target_cid = None
+                            current_prompt = full_prompt_fallback
                         time.sleep(0.2)
                         swapped = True
                         break
+                    logger.warning("agy quota exhausted and no further accounts to swap: %s", exc)
+                    raise
 
-                if _is_permanent_upstream(str(exc)):
+                if _is_permanent_upstream(err_str):
                     logger.warning("agy upstream error looks permanent; not retrying: %s", exc)
                     raise
 
@@ -335,6 +423,13 @@ def run_agy(
 _CONVERSATION_ID_RE = re.compile(
     r"conversation[\"=:\s]+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}"
     r"-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})"
+)
+
+# Log lines emitted by background summary/search housekeeping that mention
+# unrelated (often already-deleted) conversation UUIDs.
+_NOISY_CONVERSATION_LOG_RE = re.compile(
+    r"(reconcile_summaries|failed to generate summary|oversized step|conversationsearch)",
+    re.IGNORECASE,
 )
 
 
@@ -372,8 +467,16 @@ def _cleanup_conversation(db_path: Path) -> None:
 
 def cleanup_conversation(conversation_id: str) -> None:
     """Public: delete a conversation's DB + sidecars + brain dir by id. Used to
-    drop evicted stateful sessions."""
+    drop evicted stateful sessions across both default and profile homes."""
+    if not conversation_id:
+        return
     _cleanup_conversation(settings.conversations_dir / f"{conversation_id}.db")
+    if _HAS_MULTI_ACCOUNT and PROFILES_DIR.is_dir():
+        for prof in PROFILES_DIR.iterdir():
+            if prof.is_dir():
+                db_file = prof / ".gemini" / "antigravity-cli" / "conversations" / f"{conversation_id}.db"
+                if db_file.exists():
+                    _cleanup_conversation(db_file)
 
 
 def _keep_updater_quiet(profile_dir: Optional[Path] = None) -> None:
@@ -447,27 +550,36 @@ def sweep_all_conversations() -> int:
     return removed
 
 
+def _extract_candidate_ids(log_text: str) -> List[str]:
+    """Extract conversation UUIDs from log text while filtering noisy background lines."""
+    ids: List[str] = []
+    for line in log_text.splitlines():
+        if _NOISY_CONVERSATION_LOG_RE.search(line):
+            continue
+        for cid in _CONVERSATION_ID_RE.findall(line):
+            if cid not in ids:
+                ids.append(cid)
+    return ids
+
+
 def _db_from_log(log_path: str, directory: Optional[Path] = None) -> Optional[Path]:
     """Map this run's agy log to its conversation DB via the logged UUID, named
     "<uuid>.db". The DB file can appear a beat after the id is logged, so poll
     for it (deterministic per-run filename — safe under concurrency)."""
     log_file = Path(log_path)
+    base_dir = directory or settings.conversations_dir
     deadline = time.time() + max(2.0, settings.poll_interval * 8)
-    candidate: Optional[Path] = None
     while time.time() <= deadline:
-        if candidate is None:
-            try:
-                ids = _CONVERSATION_ID_RE.findall(
-                    log_file.read_text(encoding="utf-8", errors="replace")
-                )
-            except OSError:
-                ids = []
-            if ids:
-                candidate = (directory or settings.conversations_dir) / f"{ids[-1]}.db"
-        if candidate is not None and _looks_ready(candidate):
-            return candidate
+        try:
+            ids = _extract_candidate_ids(log_file.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            ids = []
+        for cid in reversed(ids):
+            candidate = base_dir / f"{cid}.db"
+            if _looks_ready(candidate):
+                return candidate
         time.sleep(settings.poll_interval)
-    return candidate if candidate is not None and _looks_ready(candidate) else None
+    return None
 
 
 def _read_response_with_retry(db_path: Path) -> AgResponse:
@@ -483,7 +595,7 @@ def _read_response_with_retry(db_path: Path) -> AgResponse:
             # whether to retry the whole run (with backoff), instead of burning
             # the 3s read-retry window here on every attempt.
             raise
-        except ValueError:
+        except (ValueError, sqlite3.OperationalError):
             if time.time() >= deadline:
                 raise
             time.sleep(0.2)
@@ -494,8 +606,18 @@ async def run_agy_async(
     model: Optional[str] = None,
     conversation_id: Optional[str] = None,
     keep: bool = False,
+    full_prompt_fallback: Optional[str] = None,
+    cancel_event: Optional[threading.Event] = None,
 ) -> AgyRunResult:
-    return await asyncio.to_thread(run_agy, prompt, model, conversation_id, keep)
+    return await asyncio.to_thread(
+        run_agy,
+        prompt,
+        model,
+        conversation_id,
+        keep,
+        full_prompt_fallback,
+        cancel_event,
+    )
 
 
 def _snapshot_conversations(directory: Path) -> Dict[Path, float]:
