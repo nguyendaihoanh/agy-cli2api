@@ -1,255 +1,303 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 480" width="1200" height="480" role="img" aria-label="agy-cli2api Banner">
   <defs>
-    <!-- Background Gradients -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0a0e17" />
-      <stop offset="50%" stop-color="#0f172a" />
-      <stop offset="100%" stop-color="#050811" />
-    </linearGradient>
-    <linearGradient id="gridGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.05" />
-      <stop offset="50%" stop-color="#38bdf8" stop-opacity="0.1" />
-      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.02" />
+    <!-- Warm Milky Cream Canvas (FnBOps Light Mode Aesthetic) -->
+    <linearGradient id="creamCanvas" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFDF9" />
+      <stop offset="55%" stop-color="#FAF5EC" />
+      <stop offset="100%" stop-color="#F2E9DA" />
     </linearGradient>
 
-    <!-- Metallic Vault Gate Gradients -->
-    <linearGradient id="vaultSteel" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#334155" />
-      <stop offset="50%" stop-color="#1e293b" />
-      <stop offset="100%" stop-color="#0f172a" />
+    <!-- Vault Concrete & Brushed Steel -->
+    <linearGradient id="vaultBody" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E2E8F0" />
+      <stop offset="50%" stop-color="#CBD5E1" />
+      <stop offset="100%" stop-color="#94A3B8" />
     </linearGradient>
     <linearGradient id="vaultDoor" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#475569" />
-      <stop offset="30%" stop-color="#334155" />
-      <stop offset="70%" stop-color="#1e293b" />
-      <stop offset="100%" stop-color="#0f172a" />
+      <stop offset="55%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1E293B" />
     </linearGradient>
 
-    <!-- Cyberpunk Pipe / Laser Gradients -->
-    <linearGradient id="pipeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#0ea5e9" />
-      <stop offset="50%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#06b6d4" />
-    </linearGradient>
-    <linearGradient id="liquidGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#0284c7" />
-      <stop offset="30%" stop-color="#38bdf8" />
-      <stop offset="70%" stop-color="#34d399" />
-      <stop offset="100%" stop-color="#10b981" />
-    </linearGradient>
-    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#ef4444" />
-      <stop offset="100%" stop-color="#dc2626" />
+    <!-- Siphon Flow Gradient (Terracotta -> Amber -> Emerald) -->
+    <linearGradient id="siphonFlow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#EE5D36" />
+      <stop offset="48%" stop-color="#F59E0B" />
+      <stop offset="100%" stop-color="#10B981" />
     </linearGradient>
 
-    <!-- Filters for Glow Effects -->
-    <filter id="neonGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
+    <!-- Caution Stripe Pattern -->
+    <pattern id="cautionStripe" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="8" height="16" fill="#F59E0B" />
+      <rect x="8" width="8" height="16" fill="#1C1917" />
+    </pattern>
+
+    <!-- Soft Drop Shadow -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#1C1917" flood-opacity="0.10" />
     </filter>
-    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
+    <filter id="softShadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1C1917" flood-opacity="0.08" />
     </filter>
   </defs>
 
-  <!-- Dark Canvas Base -->
-  <rect width="1200" height="480" fill="url(#bgGrad)" />
+  <!-- Base Milky Cream Background -->
+  <rect width="1200" height="480" fill="url(#creamCanvas)" />
 
-  <!-- Blueprint Background Grid -->
-  <g stroke="#1e293b" stroke-width="1" opacity="0.4">
-    <line x1="0" y1="80" x2="1200" y2="80" />
-    <line x1="0" y1="160" x2="1200" y2="160" />
+  <!-- Subtle Blueprint Grid -->
+  <g stroke="#E6DDD0" stroke-width="1" opacity="0.65">
+    <line x1="0" y1="60" x2="1200" y2="60" />
+    <line x1="0" y1="120" x2="1200" y2="120" />
+    <line x1="0" y1="180" x2="1200" y2="180" />
     <line x1="0" y1="240" x2="1200" y2="240" />
-    <line x1="0" y1="320" x2="1200" y2="320" />
-    <line x1="0" y1="400" x2="1200" y2="400" />
-    <line x1="150" y1="0" x2="150" y2="480" />
-    <line x1="300" y1="0" x2="300" y2="480" />
-    <line x1="450" y1="0" x2="450" y2="480" />
+    <line x1="0" y1="300" x2="1200" y2="300" />
+    <line x1="0" y1="360" x2="1200" y2="360" />
+    <line x1="0" y1="420" x2="1200" y2="420" />
+    <line x1="120" y1="0" x2="120" y2="480" />
+    <line x1="240" y1="0" x2="240" y2="480" />
+    <line x1="360" y1="0" x2="360" y2="480" />
+    <line x1="480" y1="0" x2="480" y2="480" />
     <line x1="600" y1="0" x2="600" y2="480" />
-    <line x1="750" y1="0" x2="750" y2="480" />
-    <line x1="900" y1="0" x2="900" y2="480" />
-    <line x1="1050" y1="0" x2="1050" y2="480" />
+    <line x1="720" y1="0" x2="720" y2="480" />
+    <line x1="840" y1="0" x2="840" y2="480" />
+    <line x1="960" y1="0" x2="960" y2="480" />
+    <line x1="1080" y1="0" x2="1080" y2="480" />
   </g>
 
-  <!-- Ambient Light Spotlight -->
-  <circle cx="850" cy="300" r="220" fill="#10b981" opacity="0.06" filter="url(#neonGlow)" />
-  <circle cx="280" cy="240" r="200" fill="#0284c7" opacity="0.08" filter="url(#neonGlow)" />
+  <!-- Soft Warm Ambient Circles -->
+  <circle cx="210" cy="240" r="210" fill="#EE5D36" opacity="0.05" />
+  <circle cx="960" cy="290" r="220" fill="#10B981" opacity="0.06" />
 
-  <!-- ==================== LEFT: THE MASSIVE STEEL VAULT (ANTIGRAVITY CLI) ==================== -->
-  <g id="vault-fortress" transform="translate(60, 60)">
-    <!-- Vault Outer Wall Frame -->
-    <rect x="0" y="0" width="340" height="340" rx="16" fill="url(#vaultSteel)" stroke="#475569" stroke-width="4" />
-    <rect x="12" y="12" width="316" height="316" rx="12" fill="#0f172a" stroke="#1e293b" stroke-width="2" />
+  <!-- ==================== CHEEKY HARD-HAT RACCOON STANDING BEHIND PIPE ==================== -->
+  <g id="cheeky-plumber" transform="translate(494, 282)" filter="url(#softShadow)">
+    <!-- Speech Bubble -->
+    <g transform="translate(68, -6)">
+      <rect x="0" y="0" width="84" height="26" rx="13" fill="#FFFFFF" stroke="#1C1917" stroke-width="2" />
+      <path d="M 8 20 L -5 27 L 16 23 Z" fill="#FFFFFF" stroke="#1C1917" stroke-width="2" stroke-linejoin="round" />
+      <rect x="3" y="18" width="15" height="6" fill="#FFFFFF" />
+      <text x="42" y="17" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="800" fill="#EE5D36">YOINK! :)</text>
+    </g>
 
-    <!-- Massive Circular Vault Door -->
-    <circle cx="170" cy="170" r="130" fill="url(#vaultDoor)" stroke="#64748b" stroke-width="6" />
-    <circle cx="170" cy="170" r="110" fill="#090d16" stroke="#334155" stroke-width="3" stroke-dasharray="8,6" />
+    <!-- Safety Vest Torso (Extends behind pipe) -->
+    <path d="M 16 56 Q 42 48 68 56 L 74 106 H 10 Z" fill="#EE5D36" stroke="#1C1917" stroke-width="2.5" stroke-linejoin="round" />
+    <!-- Reflective Stripes -->
+    <rect x="20" y="62" width="8" height="36" fill="#FEF08A" />
+    <rect x="56" y="62" width="8" height="36" fill="#FEF08A" />
+    <rect x="13" y="82" width="58" height="6" fill="#FEF08A" />
 
-    <!-- Vault Steel Spokes / Locking Pins -->
-    <rect x="164" y="20" width="12" height="300" fill="#475569" opacity="0.7" rx="3" />
-    <rect x="20" y="164" width="300" height="12" fill="#475569" opacity="0.7" rx="3" />
-    <rect x="65" y="65" width="210" height="12" transform="rotate(45 170 170)" fill="#334155" opacity="0.7" rx="3" />
-    <rect x="65" y="65" width="210" height="12" transform="rotate(-45 170 170)" fill="#334155" opacity="0.7" rx="3" />
+    <!-- Ears -->
+    <polygon points="20,26 14,10 32,18" fill="#64748B" stroke="#1C1917" stroke-width="2.5" stroke-linejoin="round" />
+    <polygon points="64,26 70,10 52,18" fill="#64748B" stroke="#1C1917" stroke-width="2.5" stroke-linejoin="round" />
 
-    <!-- Vault Center Wheel -->
-    <circle cx="170" cy="170" r="60" fill="#1e293b" stroke="#94a3b8" stroke-width="4" />
-    
-    <!-- Stylized Google Antigravity "AGY" Monogram on Door -->
-    <path d="M 170 130 L 195 185 L 145 185 Z" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linejoin="round" />
-    <line x1="155" y1="170" x2="185" y2="170" stroke="#38bdf8" stroke-width="4" />
-    <circle cx="170" cy="155" r="4" fill="#38bdf8" />
+    <!-- Raccoon Head -->
+    <ellipse cx="42" cy="38" rx="25" ry="20" fill="#CBD5E1" stroke="#1C1917" stroke-width="2.5" />
+    <!-- Cool Shades -->
+    <rect x="20" y="29" width="44" height="13" rx="6" fill="#1C1917" />
+    <line x1="26" y1="33" x2="34" y2="33" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+    <line x1="48" y1="33" x2="56" y2="33" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" opacity="0.85" />
+    <!-- Snout + Smug Grin -->
+    <ellipse cx="42" cy="48" rx="11" ry="8" fill="#FFFDF9" />
+    <circle cx="42" cy="45" r="3" fill="#1C1917" />
+    <path d="M 35 50 Q 44 55 50 48" fill="none" stroke="#1C1917" stroke-width="2.2" stroke-linecap="round" />
 
-    <!-- Door Rivets -->
-    <circle cx="45" cy="45" r="5" fill="#64748b" />
-    <circle cx="295" cy="45" r="5" fill="#64748b" />
-    <circle cx="45" cy="295" r="5" fill="#64748b" />
-    <circle cx="295" cy="295" r="5" fill="#64748b" />
+    <!-- Yellow Construction Hard Hat -->
+    <path d="M 16 24 A 26 22 0 0 1 68 24 Z" fill="#F59E0B" stroke="#1C1917" stroke-width="2.5" />
+    <rect x="37" y="4" width="10" height="18" rx="3" fill="#FBBF24" stroke="#1C1917" stroke-width="2" />
+    <rect x="11" y="22" width="62" height="6" rx="3" fill="#D97706" stroke="#1C1917" stroke-width="2" />
 
-    <!-- Vault Warning Placard -->
-    <rect x="60" y="260" width="220" height="32" rx="4" fill="#18181b" stroke="#ef4444" stroke-width="1.5" />
-    <circle cx="75" cy="276" r="4" fill="#ef4444" filter="url(#softGlow)" />
-    <text x="90" y="281" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="700" fill="#f87171" letter-spacing="1">LOCKED: GOOGLE CLI</text>
+    <!-- Left Arm & True C-Jaw Silver Wrench -->
+    <path d="M 17 66 L -2 80" stroke="#1C1917" stroke-width="7" stroke-linecap="round" />
+    <path d="M 17 66 L -2 80" stroke="#94A3B8" stroke-width="4" stroke-linecap="round" />
+    <g transform="translate(-20, 68) rotate(-25)">
+      <rect x="10" y="6" width="20" height="6.5" rx="3" fill="#94A3B8" stroke="#1C1917" stroke-width="2" />
+      <path d="M 12 4 A 7 7 0 1 0 12 14.5 L 6 12 A 3 3 0 1 1 6 6.5 Z" fill="#CBD5E1" stroke="#1C1917" stroke-width="2" stroke-linejoin="round" />
+    </g>
+
+    <!-- Right Arm Thumbs Up -->
+    <circle cx="75" cy="74" r="6" fill="#CBD5E1" stroke="#1C1917" stroke-width="2" />
+    <line x1="75" y1="68" x2="75" y2="61" stroke="#1C1917" stroke-width="4.5" stroke-linecap="round" />
+    <line x1="75" y1="68" x2="75" y2="61" stroke="#CBD5E1" stroke-width="2.2" stroke-linecap="round" />
   </g>
 
-  <!-- ==================== CENTER: THE SECRET BYPASS PIPE (API TUNNEL) ==================== -->
-  <g id="backdoor-tunnel">
-    <!-- Tunnel Entering Backside of Vault -->
-    <rect x="370" y="270" width="60" height="40" rx="4" fill="#334155" stroke="#64748b" stroke-width="2" />
-    
-    <!-- The Heavy Pipe (Outer Shell) -->
-    <path d="M 400 290 
-             C 480 290, 500 370, 570 370 
-             L 760 370 
-             C 810 370, 830 310, 880 310 
-             L 930 310" 
-          fill="none" stroke="#1e293b" stroke-width="32" stroke-linecap="round" />
+  <!-- ==================== LEFT: OVER-ENGINEERED "GOOGLE CLI" VAULT ==================== -->
+  <g id="cli-vault" transform="translate(46, 74)" filter="url(#cardShadow)">
+    <!-- Concrete & Steel Vault Shell -->
+    <rect x="0" y="0" width="312" height="332" rx="18" fill="url(#vaultBody)" stroke="#334155" stroke-width="3.5" />
+    <rect x="14" y="14" width="284" height="304" rx="12" fill="#F8FAFC" stroke="#94A3B8" stroke-width="2" />
 
-    <!-- Pipe Metallic Frame -->
-    <path d="M 400 290 
-             C 480 290, 500 370, 570 370 
-             L 760 370 
-             C 810 370, 830 310, 880 310 
-             L 930 310" 
-          fill="none" stroke="#475569" stroke-width="26" stroke-linecap="round" />
-
-    <!-- Glowing Liquid/Data Stream Inside Pipe -->
-    <path d="M 400 290 
-             C 480 290, 500 370, 570 370 
-             L 760 370 
-             C 810 370, 830 310, 880 310 
-             L 930 310" 
-          fill="none" stroke="url(#liquidGrad)" stroke-width="12" stroke-linecap="round" filter="url(#softGlow)" />
-
-    <!-- Pipe Joints / Pressure Collars -->
-    <rect x="520" y="352" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" />
-    <rect x="660" y="352" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" />
-    <rect x="790" y="335" width="16" height="36" rx="3" fill="#64748b" stroke="#94a3b8" stroke-width="1.5" transform="rotate(-30 798 353)" />
-
-    <!-- Bypass Pressure Gauge & Valve -->
-    <g transform="translate(640, 310)">
-      <line x1="28" y1="42" x2="28" y2="20" stroke="#64748b" stroke-width="6" />
-      <circle cx="28" cy="14" r="18" fill="#0f172a" stroke="#10b981" stroke-width="3" />
-      <!-- Gauge Needle -->
-      <line x1="28" y1="14" x2="38" y2="8" stroke="#34d399" stroke-width="2" />
-      <circle cx="28" cy="14" r="3" fill="#10b981" />
-      <!-- Indicator Tag -->
-      <rect x="55" y="4" width="95" height="20" rx="3" fill="#064e3b" stroke="#10b981" stroke-width="1" />
-      <text x="62" y="18" font-family="monospace" font-size="10" font-weight="700" fill="#6ee7b7">0.2s FAILOVER</text>
+    <!-- Diagonal Hazard Tape across top-left corner -->
+    <g transform="translate(10, 26) rotate(-18)">
+      <rect x="-12" y="0" width="128" height="16" rx="2" fill="url(#cautionStripe)" stroke="#1C1917" stroke-width="1.5" />
     </g>
 
-    <!-- Hotwire / Secret Tap Connector -->
-    <g transform="translate(470, 275)">
-      <path d="M 0 0 C 15 -20, 35 -15, 45 5" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="4,2" />
-      <path d="M 10 5 C 25 -10, 45 -5, 55 15" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="4,2" />
-      <circle cx="0" cy="0" r="4" fill="#f59e0b" filter="url(#softGlow)" />
-      <circle cx="45" cy="5" r="4" fill="#38bdf8" filter="url(#softGlow)" />
-      <!-- Tool Tag -->
-      <rect x="-35" y="-35" width="115" height="22" rx="4" fill="#1e1b4b" stroke="#818cf8" stroke-width="1" />
-      <text x="-25" y="-20" font-family="monospace" font-size="10" font-weight="700" fill="#a5b4fc">BACKDOOR HEIST</text>
-    </g>
-  </g>
+    <!-- Heavy Circular Vault Door -->
+    <circle cx="156" cy="148" r="104" fill="url(#vaultDoor)" stroke="#1E293B" stroke-width="4" />
+    <circle cx="156" cy="148" r="88" fill="#0F172A" stroke="#64748B" stroke-width="2" stroke-dasharray="7,5" />
 
-  <!-- ==================== RIGHT: THE JSON / OPENAI API RECEPTACLE ==================== -->
-  <g id="api-output" transform="translate(900, 160)">
-    <!-- Terminal Pod / Gateway Box -->
-    <rect x="30" y="80" width="230" height="160" rx="12" fill="#090d16" stroke="#38bdf8" stroke-width="2" filter="url(#softGlow)" />
-    
-    <!-- Gateway Screen Header -->
-    <rect x="30" y="80" width="230" height="30" rx="12" fill="#1e293b" />
-    <circle cx="48" cy="95" r="4" fill="#ef4444" />
-    <circle cx="62" cy="95" r="4" fill="#f59e0b" />
-    <circle cx="76" cy="95" r="4" fill="#10b981" />
-    <text x="96" y="100" font-family="monospace" font-size="11" font-weight="700" fill="#94a3b8">localhost:7862</text>
+    <!-- Steel Locking Spokes -->
+    <rect x="150" y="34" width="12" height="228" rx="4" fill="#64748B" opacity="0.65" />
+    <rect x="42" y="142" width="228" height="12" rx="4" fill="#64748B" opacity="0.65" />
+    <rect x="74" y="142" width="164" height="10" rx="4" fill="#475569" opacity="0.65" transform="rotate(45 156 148)" />
+    <rect x="74" y="142" width="164" height="10" rx="4" fill="#475569" opacity="0.65" transform="rotate(-45 156 148)" />
 
-    <!-- Endpoint Output Label -->
-    <text x="45" y="132" font-family="monospace" font-size="11" font-weight="700" fill="#38bdf8">POST /v1/chat/completions</text>
+    <!-- Center Vault Wheel + Antigravity Monogram -->
+    <circle cx="156" cy="148" r="48" fill="#FFFDF9" stroke="#94A3B8" stroke-width="4" />
+    <path d="M 156 118 L 178 166 L 134 166 Z" fill="none" stroke="#EE5D36" stroke-width="4.5" stroke-linejoin="round" />
+    <line x1="143" y1="152" x2="169" y2="152" stroke="#EE5D36" stroke-width="3.5" stroke-linecap="round" />
+    <circle cx="156" cy="138" r="3.5" fill="#007AFF" />
 
-    <!-- Floating Streaming JSON Blocks -->
-    <g font-family="monospace" font-size="10">
-      <rect x="45" y="145" width="200" height="22" rx="3" fill="#1e293b" opacity="0.8" />
-      <text x="52" y="160" fill="#34d399">HTTP 200 {"status": "ok"}</text>
+    <!-- Corner Rivets -->
+    <circle cx="32" cy="32" r="5" fill="#64748B" />
+    <circle cx="280" cy="32" r="5" fill="#64748B" />
+    <circle cx="32" cy="300" r="5" fill="#64748B" />
+    <circle cx="280" cy="300" r="5" fill="#64748B" />
 
-      <rect x="45" y="175" width="200" height="22" rx="3" fill="#1e293b" opacity="0.8" />
-      <text x="52" y="190" fill="#67e8f9">{"choices":[{"delta":{...}}]}</text>
+    <!-- Comically Strict Front Padlock Badge -->
+    <rect x="34" y="266" width="244" height="34" rx="7" fill="#FFF1F2" stroke="#EF4444" stroke-width="2" />
+    <circle cx="52" cy="283" r="4.5" fill="#EF4444" />
+    <text x="66" y="288" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="11.5" font-weight="800" fill="#B91C1C" letter-spacing="0.4">LOCKED: CLI ONLY (NO PEEKING)</text>
 
-      <rect x="45" y="205" width="130" height="20" rx="3" fill="#047857" opacity="0.9" />
-      <text x="52" y="219" fill="#ffffff" font-weight="700">OpenAI Compatible</text>
-    </g>
-
-    <!-- Pipe Outflow Gush / Digital Burst -->
-    <g filter="url(#neonGlow)">
-      <polygon points="20,150 40,140 40,160" fill="#10b981" opacity="0.8" />
-      <circle cx="10" cy="150" r="6" fill="#38bdf8" />
-      <circle cx="-15" cy="142" r="4" fill="#34d399" />
-      <circle cx="-25" cy="158" r="5" fill="#06b6d4" />
-      <!-- Data particles -->
-      <text x="-40" y="125" font-family="monospace" font-size="12" fill="#10b981">{ }</text>
-      <text x="-65" y="170" font-family="monospace" font-size="12" fill="#38bdf8">[ ]</text>
-      <text x="-30" y="190" font-family="monospace" font-size="11" fill="#34d399">0101</text>
+    <!-- Drilled Breach & Cracks on the Right Wall -->
+    <g transform="translate(292, 212)">
+      <path d="M -8 -16 L -18 -26 M -4 -18 L -6 -32 M -10 18 L -22 28 M -2 20 L 2 30" stroke="#334155" stroke-width="2" stroke-linecap="round" />
+      <rect x="-10" y="-18" width="26" height="36" rx="5" fill="#1C1917" stroke="#F59E0B" stroke-width="2.5" />
+      <circle cx="-18" cy="32" r="3" fill="#94A3B8" />
+      <circle cx="22" cy="28" r="2.5" fill="#64748B" />
     </g>
   </g>
 
-  <!-- ==================== HEADER TYPOGRAPHY & BRANDING ==================== -->
-  <g id="header-text" transform="translate(440, 75)">
-    <!-- Main Title -->
-    <text x="0" y="32" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="38" font-weight="900" fill="#ffffff" letter-spacing="-0.5">
-      agy-cli2api
-    </text>
-    <!-- Subtitle Badge -->
-    <rect x="235" y="8" width="165" height="26" rx="5" fill="#0284c7" opacity="0.2" stroke="#38bdf8" stroke-width="1" />
-    <text x="245" y="26" font-family="monospace" font-size="12" font-weight="700" fill="#38bdf8">
-      HIGH-SPEED GATEWAY
-    </text>
+  <!-- ==================== CENTER: SNEAKY PLUMBING SIPHON PIPE ==================== -->
+  <g id="siphon-pipeline">
+    <!-- Pipe Outer Dark Outline -->
+    <path d="M 354 304
+             C 425 304, 445 386, 520 386
+             L 725 386
+             C 785 386, 805 320, 860 320
+             L 882 320"
+          fill="none" stroke="#1C1917" stroke-width="32" stroke-linecap="round" />
 
-    <!-- Tagline -->
-    <text x="0" y="62" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="500" fill="#94a3b8">
-      Antigravity CLI to OpenAI API • Multi-Account Auto-Swap • Protobuf SQLite Parser
-    </text>
+    <!-- Clear Glass Pipe Body -->
+    <path d="M 354 304
+             C 425 304, 445 386, 520 386
+             L 725 386
+             C 785 386, 805 320, 860 320
+             L 882 320"
+          fill="none" stroke="#FFFDF9" stroke-width="25" stroke-linecap="round" />
+
+    <!-- Flowing Data Stream Inside -->
+    <path d="M 354 304
+             C 425 304, 445 386, 520 386
+             L 725 386
+             C 785 386, 805 320, 860 320
+             L 882 320"
+          fill="none" stroke="url(#siphonFlow)" stroke-width="13" stroke-linecap="round" />
+
+    <!-- Specular Glass Highlight -->
+    <path d="M 366 297
+             C 430 297, 448 379, 520 379
+             L 725 379
+             C 782 379, 802 313, 860 313"
+          fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.7" />
+
+    <!-- Pipe Clamps / Duct Tape Collars -->
+    <rect x="462" y="366" width="16" height="40" rx="4" fill="#94A3B8" stroke="#1C1917" stroke-width="2" />
+    <rect x="615" y="366" width="16" height="40" rx="4" fill="#94A3B8" stroke="#1C1917" stroke-width="2" />
+    <rect x="765" y="346" width="16" height="40" rx="4" fill="#94A3B8" stroke="#1C1917" stroke-width="2" transform="rotate(-32 773 366)" />
+
+    <!-- Comic Leaking Droplet & Tiny Espresso Cup Under Clamp -->
+    <path d="M 470 409 Q 475 419 470 423 Q 465 419 470 409 Z" fill="#EE5D36" />
+    <g transform="translate(454, 429)">
+      <path d="M 2 0 H 30 V 14 A 10 10 0 0 1 20 24 H 12 A 10 10 0 0 1 2 14 Z" fill="#FFFFFF" stroke="#1C1917" stroke-width="2" />
+      <path d="M 30 4 H 36 A 4 4 0 0 1 36 14 H 30" fill="none" stroke="#1C1917" stroke-width="2" />
+      <rect x="5" y="3" width="22" height="5" rx="2" fill="#EE5D36" />
+    </g>
+
+    <!-- Pressure Gauge & Valve ("0.2s AUTO-SWAP") -->
+    <g transform="translate(603, 304)" filter="url(#softShadow)">
+      <line x1="20" y1="62" x2="20" y2="34" stroke="#1C1917" stroke-width="6" />
+      <circle cx="20" cy="20" r="22" fill="#FFFDF9" stroke="#1C1917" stroke-width="3" />
+      <path d="M 7 24 A 14 14 0 0 1 33 24" fill="none" stroke="#E2E8F0" stroke-width="4" stroke-linecap="round" />
+      <path d="M 24 8 A 14 14 0 0 1 33 24" fill="none" stroke="#10B981" stroke-width="4" stroke-linecap="round" />
+      <line x1="20" y1="20" x2="32" y2="11" stroke="#EE5D36" stroke-width="2.5" stroke-linecap="round" />
+      <circle cx="20" cy="20" r="3.5" fill="#1C1917" />
+      <!-- Tag -->
+      <rect x="48" y="8" width="114" height="24" rx="6" fill="#ECFDF5" stroke="#10B981" stroke-width="1.8" />
+      <text x="105" y="24" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="800" fill="#047857">0.2s AUTO-SWAP</text>
+    </g>
+
+    <!-- Cheeky Tilted Sticker Over the Drilled Pipe -->
+    <g transform="translate(382, 212) rotate(-5)" filter="url(#softShadow)">
+      <rect x="0" y="0" width="184" height="28" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="2" />
+      <text x="92" y="18" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" font-weight="800" fill="#92400E">TOTALLY NORMAL PLUMBING</text>
+    </g>
+
+    <!-- Floating Tokens Outflow (Cleanly spaced away from pipe) -->
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-weight="800">
+      <text x="804" y="286" font-size="13" fill="#10B981">{ }</text>
+      <text x="838" y="294" font-size="12" fill="#EE5D36">[ ]</text>
+      <text x="818" y="368" font-size="11" fill="#007AFF">0101</text>
+      <polygon points="866,310 886,320 866,330" fill="#10B981" />
+    </g>
+  </g>
+
+  <!-- ==================== RIGHT: CRISP LIGHT-MODE API RECEPTACLE ==================== -->
+  <g id="api-card" transform="translate(886, 198)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="268" height="196" rx="14" fill="#FFFFFF" stroke="#D6CFC4" stroke-width="2.5" />
+    <!-- Top Bar -->
+    <path d="M 0 14 A 14 14 0 0 1 14 0 H 254 A 14 14 0 0 1 268 14 V 34 H 0 Z" fill="#F5EFE6" />
+    <line x1="0" y1="34" x2="268" y2="34" stroke="#E6DDD0" stroke-width="1.5" />
+    <circle cx="18" cy="17" r="4.5" fill="#EF4444" />
+    <circle cx="34" cy="17" r="4.5" fill="#F59E0B" />
+    <circle cx="50" cy="17" r="4.5" fill="#10B981" />
+    <text x="74" y="21" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" font-weight="700" fill="#57534E">127.0.0.1:7862</text>
+
+    <!-- Endpoint -->
+    <text x="16" y="60" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" font-weight="800" fill="#EE5D36">POST /v1/chat/completions</text>
+
+    <!-- JSON Payloads -->
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5">
+      <rect x="16" y="74" width="236" height="28" rx="6" fill="#FAF6EE" stroke="#E6DDD0" stroke-width="1" />
+      <text x="24" y="92" font-weight="700" fill="#059669">HTTP 200 {"status": "ok"}</text>
+
+      <rect x="16" y="110" width="236" height="28" rx="6" fill="#FAF6EE" stroke="#E6DDD0" stroke-width="1" />
+      <text x="24" y="128" font-weight="600" fill="#0284C7">{"choices":[{"delta":{...}}]}</text>
+
+      <!-- Bottom Badge -->
+      <rect x="16" y="148" width="150" height="30" rx="8" fill="#10B981" />
+      <text x="91" y="167" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="800" fill="#FFFFFF">OpenAI Compatible</text>
+    </g>
+  </g>
+
+  <!-- Rubber Stamp Under API Card -->
+  <g transform="translate(896, 412) rotate(-2.5)">
+    <rect x="0" y="0" width="248" height="28" rx="6" fill="none" stroke="#EE5D36" stroke-width="1.8" stroke-dasharray="5,3" opacity="0.75" />
+    <text x="124" y="18" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" font-weight="800" fill="#EE5D36" opacity="0.85">LOCAL ADAPTER • NO REFUNDS</text>
+  </g>
+
+  <!-- ==================== HEADER TYPOGRAPHY & PILLS ==================== -->
+  <g id="header" transform="translate(402, 54)">
+    <text x="0" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="42" font-weight="900" fill="#1C1917" letter-spacing="-0.8">agy-cli2api</text>
+
+    <!-- Terracotta Badge -->
+    <rect x="242" y="8" width="136" height="28" rx="8" fill="#FFF1EC" stroke="#EE5D36" stroke-width="1.8" />
+    <text x="310" y="26" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" font-weight="800" fill="#C2410C">SIPHON GATEWAY</text>
+
+    <!-- Subtitle -->
+    <text x="0" y="64" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="15.5" font-weight="600" fill="#57534E">Antigravity CLI to OpenAI API • Multi-Account Auto-Swap • Protobuf Parser</text>
 
     <!-- Feature Pills -->
-    <g transform="translate(0, 85)" font-family="monospace" font-size="11" font-weight="600">
-      <!-- Pill 1 -->
-      <rect x="0" y="0" width="115" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <circle cx="10" cy="12" r="3" fill="#10b981" />
-      <text x="20" y="16" fill="#cbd5e1">0.2s Failover</text>
+    <g transform="translate(0, 84)" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" font-weight="700" filter="url(#softShadow)">
+      <rect x="0" y="0" width="132" height="30" rx="8" fill="#FFFFFF" stroke="#E6DDD0" stroke-width="1.5" />
+      <circle cx="15" cy="15" r="4" fill="#10B981" />
+      <text x="27" y="19" fill="#1C1917">0.2s Failover</text>
 
-      <!-- Pill 2 -->
-      <rect x="125" y="0" width="135" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <circle cx="135" cy="12" r="3" fill="#38bdf8" />
-      <text x="145" y="16" fill="#cbd5e1">Pure-Python Core</text>
+      <rect x="144" y="0" width="154" height="30" rx="8" fill="#FFFFFF" stroke="#E6DDD0" stroke-width="1.5" />
+      <circle cx="159" cy="15" r="4" fill="#EE5D36" />
+      <text x="171" y="19" fill="#1C1917">Pure-Python Core</text>
 
-      <!-- Pill 3 -->
-      <rect x="270" y="0" width="145" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <circle cx="280" cy="12" r="3" fill="#f59e0b" />
-      <text x="290" y="16" fill="#cbd5e1">Protobuf Decoded</text>
+      <rect x="310" y="0" width="154" height="30" rx="8" fill="#FFFFFF" stroke="#E6DDD0" stroke-width="1.5" />
+      <circle cx="325" cy="15" r="4" fill="#F59E0B" />
+      <text x="337" y="19" fill="#1C1917">Protobuf Decoded</text>
     </g>
   </g>
-
 </svg>
