@@ -20,7 +20,7 @@ Native **Hermes Agent** (`kind: model-provider`) plugin packaging the multi-acco
 
 ### From GitHub directly
 ```bash
-hermes plugins install https://github.com/nguyendaihoanh/agy-cli2api#subdirectory=hermes-plugin/agy-cli2api
+hermes plugins install https://github.com/nguyendaihoanh/agy-cli2api#hermes-plugin/agy-cli2api
 hermes plugins enable agy-cli2api
 ```
 

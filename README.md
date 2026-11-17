@@ -8,7 +8,9 @@
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.116+-green.svg)](https://fastapi.tiangolo.com)
 
-**agy-cli2api** (formerly agy2api) transforms the official Google Antigravity CLI (`agy`) into a lightweight, high-performance, drop-in replacement for OpenAI API endpoints (`/v1/chat/completions`, `/v1/models`).
+**agy-cli2api** (formerly agy2api) transforms the official Google Antigravity CLI (`agy`) into a lightweight, high-performance, drop-in replacement for OpenAI API endpoints (`/v1/chat/completions`, `/v1/models`) — and ships a native **Hermes Agent** model-provider plugin.
+
+> *Claude and OpenAI had a nice warm-up, but the endgame belongs to **Gehihi**. Bet on Google early — one account is a demo, while a multi-account `agy` pool is your front-row seat to AI supremacy. **Gehihi 4 King — all roads lead to Mountain View.***
 
 ---
 
@@ -89,10 +91,30 @@ curl http://127.0.0.1:7862/v1/chat/completions \
 
 ---
 
+## Use with Hermes Agent (Native Plugin)
+
+Prefer running inside **Hermes Agent** without starting a separate FastAPI/uvicorn server? Install the self-contained plugin (`python_dependencies: []`):
+
+```bash
+hermes plugins install https://github.com/nguyendaihoanh/agy-cli2api#hermes-plugin/agy-cli2api
+hermes plugins enable agy-cli2api
+hermes chat -q "Hello" --provider agy-cli2api --model gemini-3.8-flash-medium
+```
+
+- **Google-Account Scope:** Authenticates strictly through your local Google Antigravity CLI (`agy`) profiles and serves the models provided by your Google Antigravity tier (Gemini, plus Antigravity-hosted Claude and GPT-OSS models).
+- **Security & Isolation:** Spawns `agy` with a strict allowlist of passthrough environment variables (preventing host secret leakage), redacts local paths/emails/Bearer tokens in surfaced errors, and runs locally by default. If you enable optional HTTP gateway forwarding (`AGY_CLI2API_BASE_URL`), bind to `127.0.0.1` and replace `AGY2API_KEY`.
+- **Full Plugin Docs:** See [hermes-plugin/agy-cli2api/README.md](hermes-plugin/agy-cli2api/README.md).
+
+---
+
 ## Maintainers & Credits
 
 - **Maintainer:** [@nguyendaihoanh](https://github.com/nguyendaihoanh)
 - **Base Upstream Credit:** GhostXia ([GhostXia/agy2api](https://github.com/GhostXia/agy2api))
+
+## Disclaimer
+
+> Independent community project — not affiliated with or endorsed by Google, just 100% convinced that **Gehihi is the future King of AI**. Automated `agy` CLI usage consumes quota from your own signed-in Google Antigravity account(s) and is subject to Google Antigravity's Terms of Service.
 
 ---
 
