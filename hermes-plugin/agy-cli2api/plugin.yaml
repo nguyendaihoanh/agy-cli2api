@@ -1,0 +1,27 @@
+name: agy-cli2api
+manifest_version: 2
+version: "1.0.0"
+kind: model-provider
+description: >-
+  Google Antigravity multi-account provider for Hermes Agent via the local agy
+  CLI (or an optional local agy-cli2api HTTP gateway). Supports 0.2s automatic
+  account rotation across local profiles on 429/403 quota limits, protobuf
+  SQLite extraction, reasoning effort mapping, stateful --conversation resume,
+  and Hermes tool calling. Disclosure: executes the local agy binary under the
+  user's own signed-in Google Antigravity profiles; review Google's Terms of
+  Service before automated use.
+author: nguyendaihoanh
+license: Apache-2.0
+homepage: https://github.com/nguyendaihoanh/agy-cli2api
+platforms:
+  - linux
+  - macos
+  - windows
+requires_hermes: ">=0.21.4"
+external_dependencies:
+  - command: agy
+provides_tools: []
+provides_hooks: []
+provides_middleware: []
+requires_env: []
+python_dependencies: []
