@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import re
 import shutil
+import subprocess
+import sys
+import threading
+import time
 from dataclasses import dataclass
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from pathlib import Path
+
+logger = logging.getLogger("agy2api.config")
 
 def _strip_inline_comment(val: str) -> str:
     """Strip outer matching quotes or unquoted inline '#' comments."""
@@ -83,10 +91,16 @@ def _csv_env(name: str, default: List[str]) -> List[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-# Maps clean OpenAI-style model ids (exposed via /v1/models) to the exact
-# display labels that `agy models` prints and `agy --model` accepts verbatim.
-# Update this if `agy models` changes its catalog.
+# Fallback mapping from clean OpenAI-style model ids to the exact display labels
+# that `agy models` prints and `agy --model` accepts verbatim.
+# At runtime, `discover_model_catalog()` queries `agy models` dynamically so new
+# models released server-side appear automatically without updating this map.
 MODEL_MAP: Dict[str, str] = {
+    # Gemini 4 Neon
+    "gemini-4-neon-xhigh": "Gemini 4 Neon (XHigh)",
+    "gemini-4-neon-high": "Gemini 4 Neon (High)",
+    "gemini-4-neon-medium": "Gemini 4 Neon (Medium)",
+    "gemini-4-neon-low": "Gemini 4 Neon (Low)",
     # Gemini 4 Argon
     "gemini-4-argon-medium": "Gemini 4 Argon (Medium)",
     "gemini-4-argon-high": "Gemini 4 Argon (High)",
@@ -96,7 +110,8 @@ MODEL_MAP: Dict[str, str] = {
     "gemini-4-hydrogen-medium": "Gemini 4 Hydrogen (Medium)",
     "gemini-4-hydrogen-high": "Gemini 4 Hydrogen (High)",
     "gemini-4-hydrogen-xhigh": "Gemini 4 Hydrogen (XHigh)",
-    # Orchestrator
+    # Orchestrators
+    "gemini-pro-orchestrator-neon": "Orchestrator (Neon)",
     "gemini-pro-orchestrator-g1-pro": "Orchestrator (Argon)",
     # Gemini 3.8 Flash
     "gemini-3.8-flash-high": "Gemini 3.8 Flash (High)",
@@ -119,12 +134,171 @@ MODEL_MAP: Dict[str, str] = {
     "gpt-oss-120b": "GPT-OSS 120B (Medium)",
 }
 
+_MODEL_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{1,127}$")
+_BULLET_PREFIX_RE = re.compile(r"^(?:[*•-]\s+)+")
+_IGNORED_PREFIXES = (
+    "fetching ",
+    "available models",
+    "loading ",
+    "usage:",
+    "error:",
+    "warning:",
+)
+
+_MODEL_CACHE_LOCK = threading.Lock()
+_MODEL_CACHE_TS: float = 0.0
+_MODEL_CACHE_TTL_ACTIVE: float = 0.0
+_MODEL_CACHE_DATA: Dict[str, str] = {}
+_FALLBACK_BACKOFF_SEC: float = 60.0
+
+
+def parse_agy_models_output(raw: str) -> Dict[str, str]:
+    """Parse `agy models` stdout into an ordered `{model_id: display_label}` map.
+
+    Supports:
+    - Tab-separated two-column lines (`gemini-4-neon-xhigh\\tGemini 4 Neon (XHigh)`).
+    - Multi-space separated two-column lines (`gemini-4-neon-xhigh   Gemini 4 Neon (XHigh)`).
+    - Known static display-label-only lines.
+    - Bare model slug lines containing `-` or `.`.
+    """
+    label_to_id = {v.lower(): k for k, v in MODEL_MAP.items()}
+    discovered: Dict[str, str] = {}
+
+    for line in raw.splitlines():
+        cleaned = _BULLET_PREFIX_RE.sub("", line.strip()).strip()
+        if not cleaned or set(cleaned) <= {"-", "=", "_", " "}:
+            continue
+        low = cleaned.lower()
+        if any(low.startswith(prefix) for prefix in _IGNORED_PREFIXES):
+            continue
+
+        # Primary format: `model-id\tDisplay Label` or `model-id   Display Label`
+        parts: List[str] = []
+        if "\t" in cleaned:
+            parts = [p.strip() for p in cleaned.split("\t", 1)]
+        else:
+            split_ws = re.split(r"\s{2,}", cleaned, maxsplit=1)
+            if len(split_ws) == 2:
+                parts = [p.strip() for p in split_ws]
+
+        if len(parts) == 2 and parts[0] and parts[1] and _MODEL_ID_RE.match(parts[0]):
+            discovered.setdefault(parts[0], parts[1])
+            continue
+
+        # Fallback: display label matching a known static entry
+        if low in label_to_id:
+            mid = label_to_id[low]
+            discovered.setdefault(mid, MODEL_MAP[mid])
+            continue
+
+        # Fallback: single-column model slug (e.g. `gemini-5-future-high`)
+        if ("-" in cleaned or "." in cleaned) and _MODEL_ID_RE.match(cleaned):
+            discovered.setdefault(cleaned, MODEL_MAP.get(cleaned, cleaned))
+
+    return discovered
+
+
+def clear_model_cache() -> None:
+    """Clear the cached live model catalog."""
+    global _MODEL_CACHE_TS, _MODEL_CACHE_TTL_ACTIVE, _MODEL_CACHE_DATA
+    with _MODEL_CACHE_LOCK:
+        _MODEL_CACHE_TS = 0.0
+        _MODEL_CACHE_TTL_ACTIVE = 0.0
+        _MODEL_CACHE_DATA = {}
+
+
+def _run_agy_models_cli(agy_path: str, timeout: float, env: Dict[str, str]) -> Optional[Dict[str, str]]:
+    """Invoke `agy models` safely without blocking on stdin or console windows."""
+    if not agy_path or not (shutil.which(agy_path) or os.path.exists(agy_path)):
+        return None
+    creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0) if sys.platform == "win32" else 0
+    try:
+        proc = subprocess.run(
+            [agy_path, "models"],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            env=env,
+            creationflags=creationflags,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout:
+            parsed = parse_agy_models_output(proc.stdout)
+            if parsed:
+                return parsed
+        else:
+            logger.debug("agy models exited with rc=%s", proc.returncode)
+    except Exception as exc:
+        logger.debug("agy models discovery failed: %s", exc)
+    return None
+
+
+def discover_model_catalog(force_refresh: bool = False) -> Dict[str, str]:
+    """Return the active `{model_id: display_label}` catalog with TTL caching.
+
+    Queries `agy models` dynamically when `AGY_MODEL_DISCOVERY` is enabled; falls
+    back cleanly to `MODEL_MAP` if the CLI is missing, fails, or times out.
+    """
+    global _MODEL_CACHE_TS, _MODEL_CACHE_TTL_ACTIVE, _MODEL_CACHE_DATA
+
+    if not settings.model_discovery:
+        return dict(MODEL_MAP)
+
+    now = time.monotonic()
+    with _MODEL_CACHE_LOCK:
+        if not force_refresh and _MODEL_CACHE_DATA and (now - _MODEL_CACHE_TS) < _MODEL_CACHE_TTL_ACTIVE:
+            return dict(_MODEL_CACHE_DATA)
+
+    parsed = _run_agy_models_cli(
+        settings.agy_path,
+        timeout=settings.model_discovery_timeout,
+        env=settings.agy_env(),
+    )
+
+    now_after = time.monotonic()
+    with _MODEL_CACHE_LOCK:
+        if parsed:
+            _MODEL_CACHE_DATA = dict(parsed)
+            _MODEL_CACHE_TS = now_after
+            _MODEL_CACHE_TTL_ACTIVE = max(1.0, settings.model_cache_ttl)
+            logger.info("Discovered %d live models from agy CLI", len(_MODEL_CACHE_DATA))
+            return dict(_MODEL_CACHE_DATA)
+
+        # CLI unavailable/timed out: keep previous live cache if any, else static fallback,
+        # with short backoff so repeated /v1/models calls don't stall on every request.
+        fallback = dict(_MODEL_CACHE_DATA) if _MODEL_CACHE_DATA else dict(MODEL_MAP)
+        _MODEL_CACHE_DATA = fallback
+        _MODEL_CACHE_TS = now_after
+        _MODEL_CACHE_TTL_ACTIVE = min(_FALLBACK_BACKOFF_SEC, max(1.0, settings.model_cache_ttl))
+        return dict(fallback)
+
+
+def get_exposed_models(force_refresh: bool = False) -> List[str]:
+    """Return model IDs to expose via `/v1/models`.
+
+    Honors an explicit `AGY_MODELS` override when configured; otherwise uses
+    dynamic discovery (falling back to static `MODEL_MAP`).
+    """
+    if settings.models_override is not None:
+        return list(settings.models_override)
+    return list(discover_model_catalog(force_refresh=force_refresh).keys())
+
 
 def resolve_model(model: Optional[str]) -> Optional[str]:
-    """Translate an exposed model id to the agy label. Pass through unknown
-    values unchanged so raw `agy` labels also work directly."""
+    """Translate an exposed model id to the agy label.
+
+    Consults dynamically discovered labels first, then static `MODEL_MAP` aliases,
+    and passes unknown values through unchanged so new/raw `agy` IDs work directly.
+    """
     if not model:
         return None
+    with _MODEL_CACHE_LOCK:
+        live_label = _MODEL_CACHE_DATA.get(model)
+    if live_label:
+        return live_label
     return MODEL_MAP.get(model, model)
 
 
@@ -185,13 +359,20 @@ class Settings:
     workdir: Path = Path(
         os.getenv("AGY_WORKDIR", str(Path(__file__).resolve().parent))
     )
+    model_discovery: bool = _bool_env("AGY_MODEL_DISCOVERY", True)
+    model_cache_ttl: float = float(os.getenv("AGY_MODEL_CACHE_TTL", "1800"))
+    model_discovery_timeout: float = float(os.getenv("AGY_MODEL_DISCOVERY_TIMEOUT", "8.0"))
+    models_override: Optional[List[str]] = None
     models: Optional[List[str]] = None  # type: ignore[assignment]
 
     def __post_init__(self) -> None:
+        raw_models = os.getenv("AGY_MODELS", "").strip()
+        override = [item.strip() for item in raw_models.split(",") if item.strip()] if raw_models else None
+        object.__setattr__(self, "models_override", override)
         object.__setattr__(
             self,
             "models",
-            _csv_env("AGY_MODELS", list(MODEL_MAP.keys())),
+            override if override is not None else list(MODEL_MAP.keys()),
         )
         # In stateful mode, redirect conversations_dir into the isolated home
         # so agy reads/writes only there (and our sweeps stay self-contained).

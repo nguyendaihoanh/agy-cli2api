@@ -27,7 +27,7 @@ from agy_runner import (
     sweep_all_conversations,
     sweep_orphan_sidecars,
 )
-from config import is_loopback_host, resolve_model, settings
+from config import get_exposed_models, is_loopback_host, resolve_model, settings
 from fake_stream import completion_id, make_heartbeat, sse_event, stream_chunks
 from models import ChatCompletionRequest, ModelInfo, ModelList
 from session_store import SessionStore, fingerprint
@@ -270,8 +270,12 @@ async def verify_token(
 
 
 @app.get("/v1/models", response_model=ModelList)
-async def list_models(_: None = Depends(verify_token)) -> ModelList:
-    return ModelList(data=[ModelInfo(id=model) for model in settings.models])
+async def list_models(
+    refresh: bool = False,
+    _: None = Depends(verify_token),
+) -> ModelList:
+    models = await asyncio.to_thread(get_exposed_models, refresh)
+    return ModelList(data=[ModelInfo(id=model) for model in models])
 
 
 @app.post("/v1/chat/completions")

@@ -16,6 +16,7 @@
 
 ## Key Features
 
+- **Dynamic Model Discovery (`agy models`):** Automatically discovers newly released Antigravity models on `/v1/models` with TTL caching (`AGY_MODEL_CACHE_TTL=1800`), on-demand refresh (`GET /v1/models?refresh=1`), and automatic fallback to the built-in catalog if the CLI is unreachable.
 - **Minimalist Pure-Python Architecture:** Ultra-lightweight (~80 KB), zero heavy dependencies, runs natively anywhere with Python 3.9+.
 - **Multi-Account Auto-Swap (0.2s Failover):** Automatically detects `429 (Resource Exhausted)` or `403 (Permission Denied)` quota limits and hot-swaps tokens/profiles in 0.2 seconds without aborting client requests.
 - **Protobuf SQLite Binary Parser:** Directly decodes Antigravity SQLite internal binary payloads for rapid response extraction.

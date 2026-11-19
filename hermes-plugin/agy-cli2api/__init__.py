@@ -17,6 +17,7 @@ from .models import (
     clear_model_cache,
     discover_models,
     get_context_length,
+    get_model_label,
     resolve_model_id,
     supported_efforts_for,
 )
@@ -46,7 +47,7 @@ class AgyCli2ApiProfile(ProviderProfile):
         return [
             {
                 "id": mid,
-                "label": MODEL_MAP.get(mid, mid),
+                "label": get_model_label(mid),
                 "note": "Multi-account pool" if "hydrogen" not in mid else "Hydrogen",
             }
             for mid in ids

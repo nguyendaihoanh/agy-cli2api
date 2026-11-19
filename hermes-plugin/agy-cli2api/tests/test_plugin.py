@@ -207,6 +207,30 @@ class AgyCli2ApiPluginTests(unittest.TestCase):
             "cid-b",
         )
 
+    def test_dynamic_model_discovery_accepts_new_future_models(self):
+        from unittest import mock
+        from agy_cli2api_plugin import models as pm
+
+        pm.clear_model_cache()
+        fake_stdout = (
+            "Fetching available models...\n"
+            "gemini-4-neon-xhigh\tGemini 4 Neon (XHigh)\n"
+            "gemini-5-nova-ultra\tGemini 5 Nova (Ultra)\n"
+        )
+        fake_proc = mock.Mock(returncode=0, stdout=fake_stdout)
+        try:
+            with mock.patch("agy_cli2api_plugin.models.os.path.exists", return_value=True), mock.patch(
+                "agy_cli2api_plugin.models.subprocess.run", return_value=fake_proc
+            ):
+                ids = pm.discover_models("/fake/agy", force_refresh=True)
+            self.assertEqual(ids, ["gemini-4-neon-xhigh", "gemini-5-nova-ultra"])
+            self.assertEqual(pm.get_model_label("gemini-5-nova-ultra"), "Gemini 5 Nova (Ultra)")
+            self.assertEqual(pm.resolve_agy_label("gemini-5-nova-ultra"), "Gemini 5 Nova (Ultra)")
+            self.assertEqual(pm.resolve_agy_label("neon"), "Gemini 4 Neon (XHigh)")
+            self.assertIn("xhigh", pm.supported_efforts_for("gemini-4-neon-high") or ())
+        finally:
+            pm.clear_model_cache()
+
 
 if __name__ == "__main__":
     unittest.main()
